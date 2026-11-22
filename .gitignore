@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.py[cod]
+data/cache/
+data/raw/
+data/data/
+web/data/*
+!web/data/.gitkeep
+*.parquet
+*.parquet.state
+*.log
+build.log
+.DS_Store

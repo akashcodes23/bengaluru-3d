@@ -1,0 +1,2501 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#111720">
+    <link rel="icon" href="data:,">
+    <title>Bengaluru 3D — Built from open map data</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #10161e;
+        color: #e8edf2;
+        font-synthesis: none;
+        text-rendering: optimizeLegibility;
+      }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 320px; min-height: 100vh; overflow: hidden; }
+      #scene { position: fixed; inset: 0; }
+      canvas { display: block; width: 100%; height: 100%; }
+      .topbar {
+        position: fixed; z-index: 2; top: 28px; left: 32px;
+        display: flex; align-items: center; gap: 12px; pointer-events: none;
+        background: radial-gradient(circle at left, rgba(16, 22, 30, 0.8) 0%, rgba(16, 22, 30, 0) 100%);
+        padding: 6px 16px 6px 6px; border-radius: 14px;
+      }
+      .mark {
+        width: 38px; height: 38px; display: grid; place-items: center;
+        border: 1px solid #49515d; border-radius: 12px; color: #ffc879;
+        font-size: 19px; background: #1b222caa;
+      }
+      .eyebrow {
+        color: #94a3b8; font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
+        text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.8);
+      }
+      h1 {
+        margin: 3px 0 0; font-size: 17px; font-weight: 550; letter-spacing: -.025em;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.8);
+      }
+      .panel {
+        position: fixed; z-index: 2; top: 28px; right: 28px; width: min(320px, calc(100vw - 32px));
+        max-height: calc(100vh - 56px); overflow-y: auto;
+        padding: 18px; border: 1px solid #ffffff16; border-radius: 16px;
+        background: #171e28e8; box-shadow: 0 16px 48px #0005; backdrop-filter: blur(16px);
+      }
+      .panel-title { margin: 0 0 5px; font-size: 13px; font-weight: 550; }
+      .hint { margin: 0; color: #8e9aa8; font-size: 11px; line-height: 1.6; }
+      .rule { height: 1px; margin: 13px 0; background: #ffffff12; }
+      .range-heading { display: flex; justify-content: space-between; align-items: center; }
+      .range-heading label { font-size: 12px; }
+      .range-value { color: #ffc879; font-size: 11px; font-variant-numeric: tabular-nums; }
+      input[type="range"] { width: 100%; margin: 12px 0 4px; accent-color: #ffc879; cursor: pointer; }
+      .quality-select {
+        padding: 5px 8px; border: 1px solid #ffffff20; border-radius: 7px;
+        background: #171e28; color: #e8edf2; font: inherit; font-size: 11px;
+      }
+      .range-scale { display: flex; justify-content: space-between; color: #71808e; font-size: 10px; }
+      .stats { display: flex; justify-content: space-between; gap: 12px; color: #84909e; font-size: 11px; }
+      .stats strong { color: #dce3e9; font-weight: 500; font-variant-numeric: tabular-nums; text-align: right; }
+      .toggle-row { display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; }
+      .toggle-row input { accent-color: #ffc879; }
+      .source-legend { display: flex; flex-wrap: wrap; gap: 7px 10px; margin-top: 9px; color: #9aa5b1; font-size: 10px; }
+      .source-legend span { display: inline-flex; align-items: center; gap: 4px; }
+      .source-swatch { width: 8px; height: 8px; border-radius: 50%; }
+      #landmark-list { display: grid; gap: 6px; max-height: 220px; overflow-y: auto; padding-right: 2px; }
+      .landmark-category-title {
+        font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em;
+        color: #94a3b8; margin: 8px 0 3px; display: flex; align-items: center; justify-content: space-between;
+      }
+      .landmark-category-title:first-child { margin-top: 2px; }
+      .landmark-category-group { display: grid; gap: 4px; }
+      .landmark-button {
+        width: 100%; padding: 6px 8px; border: 1px solid #ffffff12; border-radius: 7px;
+        background: #ffffff06; color: #dce3e9; text-align: left; font: inherit; font-size: 11px;
+        display: flex; justify-content: space-between; align-items: center; gap: 6px;
+      }
+      .landmark-button:not(:disabled) { cursor: pointer; }
+      .landmark-button:not(:disabled):hover { background: #ffffff14; border-color: #ffc87966; }
+      .landmark-button:disabled { color: #77828f; opacity: .75; }
+      .landmark-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .landmark-tag {
+        font-size: 9px; padding: 2px 5px; border-radius: 4px; font-variant-numeric: tabular-nums; white-space: nowrap;
+      }
+      .landmark-tag.verified { background: #05966933; color: #34d399; border: 1px solid #05966955; }
+      .landmark-tag.unverified { background: #64748b22; color: #94a3b8; }
+      #landmark-status.error { color: #ffb6a8; }
+      #landmark-label {
+        position: fixed; z-index: 4; left: 50%; top: 20px; transform: translateX(-50%);
+        display: none; padding: 8px 12px; border: 1px solid #ffc87966; border-radius: 10px;
+        background: #171e28e8; color: #ffc879; font-size: 12px; pointer-events: none;
+      }
+      #status {
+        position: fixed; z-index: 3; left: 50%; bottom: 24px; transform: translateX(-50%);
+        max-width: min(600px, calc(100vw - 36px)); padding: 10px 15px;
+        border: 1px solid #ffffff18; border-radius: 12px;
+        background: #171e28e8; color: #aab4bf; font-size: 11px; text-align: center;
+      }
+      #status.error { color: #ffb6a8; border-color: #ff806044; }
+      .accent { color: #ffc879; }
+      /* Loading overlay */
+      #loading-overlay {
+        position: fixed; inset: 0; z-index: 100;
+        background: #10161e;
+        display: flex; flex-direction: column; align-items: center; justify-content: center;
+        gap: 18px;
+        transition: opacity 0.6s ease, visibility 0.6s ease;
+      }
+      #loading-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+      .loading-logo { font-size: 36px; }
+      .loading-title { font-size: 22px; font-weight: 650; letter-spacing: -.03em; }
+      .loading-sub { color: #94a3b8; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
+      .loading-bar-wrap {
+        width: min(320px, 80vw); height: 3px; background: #ffffff14; border-radius: 2px; overflow: hidden;
+      }
+      .loading-bar { height: 100%; width: 0%; background: #ffc879; border-radius: 2px; transition: width 0.3s ease; }
+      .loading-hint { color: #71808e; font-size: 11px; text-align: center; line-height: 1.6; }
+      .loading-progress { color: #94a3b8; font-size: 11px; font-variant-numeric: tabular-nums; }
+      .time-presets { display: flex; gap: 6px; margin-top: 8px; }
+      .preset-btn {
+        flex: 1; padding: 4px 6px; background: #ffffff0a;
+        border: 1px solid #ffffff18; border-radius: 6px;
+        color: #cbd5e1; font: inherit; font-size: 10px; font-weight: 550;
+        cursor: pointer; transition: all 0.15s ease; text-align: center;
+      }
+      .preset-btn:hover { background: #ffffff18; border-color: #ffc87988; }
+      .preset-btn.active { background: #ffc87922; border-color: #ffc879; color: #ffc879; }
+      /* Station hover tooltip */
+      #metro-tooltip {
+        position: fixed; display: none; z-index: 100; pointer-events: none;
+        background: #0f172ae8; border: 1px solid #38bdf888; border-radius: 8px;
+        padding: 6px 10px; font-size: 11px; color: #f8fafc;
+        backdrop-filter: blur(8px); box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+        transform: translate(-50%, -125%);
+      }
+      #metro-tooltip-name { font-weight: 600; color: #38bdf8; }
+      #metro-tooltip-type { font-size: 9px; color: #94a3b8; margin-top: 2px; }
+      /* Building Inspect Panel */
+      #inspect-panel {
+        position: fixed; z-index: 10; left: 32px; top: 88px; width: 290px;
+        padding: 14px 16px; border: 1px solid #ffffff1a; border-radius: 14px;
+        background: #171e28f0; box-shadow: 0 16px 40px #0007; backdrop-filter: blur(16px);
+      }
+      .inspect-header { display: flex; justify-content: space-between; align-items: flex-start; }
+      .inspect-badge { font-size: 9px; text-transform: uppercase; letter-spacing: 0.1em; color: #38bdf8; font-weight: 600; }
+      .inspect-title { margin: 3px 0 0; font-size: 14px; font-weight: 600; color: #f1f5f9; line-height: 1.3; }
+      .inspect-close { background: none; border: none; color: #94a3b8; font-size: 16px; cursor: pointer; padding: 0 4px; }
+      .inspect-close:hover { color: #f8fafc; }
+      .inspect-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; margin-top: 10px; font-size: 11px; }
+      .inspect-item { display: flex; flex-direction: column; gap: 2px; }
+      .inspect-label { color: #64748b; font-size: 10px; }
+      .inspect-val { color: #f8fafc; font-size: 12px; font-variant-numeric: tabular-nums; }
+      .inspect-link { margin-top: 10px; padding-top: 8px; border-top: 1px solid #ffffff14; }
+      .inspect-link a { color: #ffc879; text-decoration: none; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; }
+      .inspect-link a:hover { text-decoration: underline; }
+      /* Footer attribution bar */
+      .footer-credit {
+        position: fixed; bottom: 10px; left: 24px; z-index: 10;
+        display: flex; align-items: center; gap: 10px; font-size: 10px; color: #94a3b8;
+        pointer-events: auto;
+      }
+      .footer-credit span { text-shadow: 0 1px 4px rgba(0,0,0,0.8); }
+      .about-btn {
+        background: #ffffff14; border: 1px solid #ffffff26; border-radius: 4px;
+        color: #f1f5f9; padding: 2px 8px; font-size: 10px; font-weight: 500;
+        cursor: pointer; transition: all 0.15s ease;
+      }
+      .about-btn:hover { background: #ffffff2a; border-color: #38bdf8; color: #38bdf8; }
+      @media (max-width: 650px) {
+        body { overflow: auto; }
+        .topbar { top: 16px; left: 16px; }
+        .footer-credit { display: none; }
+        .panel {
+          top: auto; right: 10px; bottom: 48px; left: 10px; width: auto;
+          max-height: calc(100vh - 120px); padding: 13px;
+        }
+        .panel .rule { margin: 9px 0; }
+        #status { bottom: 8px; }
+      }
+    </style>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js",
+          "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.169.0/examples/jsm/"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <div id="scene" aria-label="Interactive 3D city model"></div>
+    <div id="loading-overlay" role="status" aria-label="Loading">
+      <div class="loading-logo" aria-hidden="true">⌁</div>
+      <div class="loading-title">Bengaluru <span class="accent">3D</span></div>
+      <div class="loading-sub">Built from open map data</div>
+      <div class="loading-bar-wrap"><div class="loading-bar" id="loading-bar"></div></div>
+      <div class="loading-progress" id="loading-progress">Initialising…</div>
+      <div class="loading-hint">Drag to orbit &nbsp;·&nbsp; Scroll to zoom &nbsp;·&nbsp; Right-drag to pan</div>
+    </div>
+    <header class="topbar">
+      <div class="mark" aria-hidden="true">⌁</div>
+      <div>
+        <div class="eyebrow">Built from open map data</div>
+        <h1>Bengaluru <span class="accent">3D</span></h1>
+      </div>
+    </header>
+    <div id="metro-tooltip">
+      <div id="metro-tooltip-name"></div>
+      <div id="metro-tooltip-type"></div>
+    </div>
+    <div id="inspect-panel" style="display: none;">
+      <div class="inspect-header">
+        <div>
+          <span class="inspect-badge" id="inspect-badge">Building</span>
+          <span class="inspect-badge" id="inspect-corroborated-badge" style="display: none; margin-left: 4px; background: #a855f722; color: #c084fc; border: 1px solid #a855f766;">Corroborated</span>
+          <span class="inspect-badge" id="inspect-uncertain-badge" style="display: none; margin-left: 4px; background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b66;">Uncertain Height</span>
+          <h3 class="inspect-title" id="inspect-name">Unnamed Building</h3>
+        </div>
+        <button id="inspect-close" class="inspect-close" type="button" aria-label="Close">✕</button>
+      </div>
+      <div class="rule" style="margin: 8px 0;"></div>
+      <div class="inspect-grid">
+        <div class="inspect-item">
+          <span class="inspect-label">Selected Height</span>
+          <strong class="inspect-val" id="inspect-height">—</strong>
+        </div>
+        <div class="inspect-item">
+          <span class="inspect-label">Height Source</span>
+          <strong class="inspect-val" id="inspect-source" style="color: #38bdf8;">—</strong>
+        </div>
+      </div>
+      <div style="margin-top: 8px; padding: 8px 10px; background: #0f172a88; border: 1px solid #ffffff15; border-radius: 8px;">
+        <div style="font-size: 10px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px;">Height Comparison</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px; text-align: center;">
+          <div style="background: #1e293b66; padding: 4px 2px; border-radius: 4px;">
+            <div style="font-size: 9px; color: #64748b;">OSM Tag</div>
+            <strong id="inspect-tag-val" style="font-size: 11px; color: #4fc4a2;">—</strong>
+          </div>
+          <div style="background: #1e293b66; padding: 4px 2px; border-radius: 4px;">
+            <div style="font-size: 9px; color: #64748b;">Floors × 3.2m</div>
+            <strong id="inspect-floors-val" style="font-size: 11px; color: #68a6ff;">—</strong>
+          </div>
+          <div style="background: #1e293b66; padding: 4px 2px; border-radius: 4px;">
+            <div style="font-size: 9px; color: #64748b;">GHSL Raster (2018)</div>
+            <strong id="inspect-raster-val" style="font-size: 11px; color: #ffc54a;">—</strong>
+          </div>
+        </div>
+      </div>
+      <div class="inspect-grid" style="margin-top: 8px;">
+        <div class="inspect-item">
+          <span class="inspect-label">Footprint Area</span>
+          <strong class="inspect-val" id="inspect-area">—</strong>
+        </div>
+        <div class="inspect-item">
+          <span class="inspect-label">Coordinates</span>
+          <strong class="inspect-val" id="inspect-coords" style="font-size: 10px; color: #cbd5e1;">—</strong>
+        </div>
+      </div>
+      <div id="inspect-tag-notice" style="display: none; margin-top: 8px; padding: 6px 8px; border-radius: 6px; background: #f28e5b22; border: 1px solid #f28e5b66; font-size: 10px; color: #f28e5b; line-height: 1.4;">
+        <strong>Rejected Tag:</strong> <span id="inspect-tag-reason">—</span>
+      </div>
+      <div id="inspect-landmark-link" class="inspect-link" style="display: none;">
+        <a id="inspect-link-anchor" href="#" target="_blank" rel="noopener">
+          <span>Verified Source</span> <span>↗</span>
+        </a>
+      </div>
+    </div>
+    <aside class="panel">
+      <h2 class="panel-title">A city in layers</h2>
+      <p class="hint">Drag to orbit, scroll to zoom, and right-drag to pan. Click any building to inspect details.</p>
+      <div class="rule"></div>
+      <div class="range-heading">
+        <label for="time">Time of day</label>
+        <span class="range-value" id="time-label">17:30</span>
+      </div>
+      <input id="time" type="range" min="0" max="100" value="72" aria-label="Time of day">
+      <div class="range-scale"><span>06:00</span><span>12:00</span><span>22:00</span></div>
+      <div class="time-presets">
+        <button type="button" class="preset-btn" id="preset-day">Day</button>
+        <button type="button" class="preset-btn active" id="preset-golden">Golden</button>
+        <button type="button" class="preset-btn" id="preset-night">Night</button>
+      </div>
+      <div class="rule"></div>
+      <div class="range-heading">
+        <label for="radius">Quality radius</label>
+        <select id="radius" class="quality-select" aria-label="Quality radius">
+          <option value="2">2 km</option>
+          <option value="4">4 km</option>
+          <option value="6">6 km</option>
+        </select>
+      </div>
+      <div class="rule"></div>
+      <div class="range-heading">
+        <label for="vertical-exaggeration">Vertical exaggeration</label>
+        <span class="range-value" id="vertical-exaggeration-label">1.0x</span>
+      </div>
+      <input id="vertical-exaggeration" type="range" min="1" max="3" step="0.5" value="1" aria-label="Vertical exaggeration">
+      <div class="rule"></div>
+      <div class="stats"><span>Chunks loaded</span><strong id="chunk-count">0 / 0</strong></div>
+      <div class="stats" style="margin-top: 8px"><span>Buildings in view</span><strong id="building-count">0</strong></div>
+      <div class="stats" style="margin-top: 8px"><span>Frame rate</span><strong id="fps">—</strong></div>
+      <div class="stats" style="margin-top: 8px"><span>Draw calls / triangles</span><strong id="render-stats">—</strong></div>
+      <div class="stats" style="margin-top: 8px"><span>Dataset</span><strong id="dataset">Loading…</strong></div>
+      <div class="rule"></div>
+      <label class="toggle-row" for="height-source">
+        <input id="height-source" type="checkbox">
+        <span>Show height source</span>
+      </label>
+      <div class="source-legend" aria-label="Height-source colours">
+        <span><i class="source-swatch" style="background:#4fc4a2"></i>Tagged</span>
+        <span><i class="source-swatch" style="background:#68a6ff"></i>Floors</span>
+        <span><i class="source-swatch" style="background:#ffc54a"></i>Raster</span>
+        <span><i class="source-swatch" style="background:#eb7676"></i>Guess</span>
+        <span><i class="source-swatch" style="background:#ff6cf0"></i>Verified</span>
+        <span><i class="source-swatch" style="background:#a855f7"></i>Corroborated</span>
+        <span><i class="source-swatch" style="background:#f28e5b"></i>Tag rejected</span>
+      </div>
+      <div class="rule"></div>
+      <label class="toggle-row" for="metro-toggle">
+        <input id="metro-toggle" type="checkbox" checked>
+        <span>Namma Metro</span>
+      </label>
+      <div id="metro-controls" style="margin-top: 6px; display: flex; flex-direction: column; gap: 6px;">
+        <div style="display: flex; gap: 14px; font-size: 11px;">
+          <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; color: #cbd5e1;">
+            <input id="metro-underground-toggle" type="checkbox">
+            <span>Show underground</span>
+          </label>
+          <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; color: #cbd5e1;">
+            <input id="metro-construction-toggle" type="checkbox">
+            <span>Under construction</span>
+          </label>
+        </div>
+        <div id="metro-legend" style="margin-top: 4px; font-size: 10px; color: #94a3b8; display: flex; flex-direction: column; gap: 4px;">
+          <div style="display: flex; flex-wrap: wrap; gap: 6px 10px;">
+            <span style="display:flex; align-items:center; gap:4px;"><i class="source-swatch" style="background:#e542de;"></i>Purple</span>
+            <span style="display:flex; align-items:center; gap:4px;"><i class="source-swatch" style="background:#009933;"></i>Green</span>
+            <span style="display:flex; align-items:center; gap:4px;"><i class="source-swatch" style="background:#eab308;"></i>Yellow</span>
+            <span style="display:flex; align-items:center; gap:4px;"><i class="source-swatch" style="background:#ec4899;"></i>Pink</span>
+            <span style="display:flex; align-items:center; gap:4px;"><i class="source-swatch" style="background:#3b82f6;"></i>Blue (u/c)</span>
+          </div>
+          <span style="display:flex; align-items:center; gap:5px; margin-top: 2px;"><i class="source-swatch" style="background:#94a3b8;"></i> 8m viaduct deck assumption</span>
+          <span style="color:#38bdf8; font-style: italic;">Metro trains: illustrative, not live</span>
+        </div>
+      </div>
+      <div class="rule"></div>
+      <h2 class="panel-title">Landmarks & Tech Parks</h2>
+      <div id="landmark-list" aria-live="polite"></div>
+      <p class="hint" id="landmark-status">Loading landmarks…</p>
+    </aside>
+    <div id="status" role="status">Loading city data…</div>
+    <div id="landmark-label" role="status"></div>
+    <footer class="footer-credit">
+      <span>Map data: © OpenStreetMap contributors (ODbL) · Overture Maps Foundation · GHSL (JRC) · Copernicus DEM (ESA)</span>
+      <button id="about-open-btn" class="about-btn" type="button">About & Data Sources</button>
+    </footer>
+
+    <!-- About & Data Sources Modal -->
+    <div id="about-modal" style="display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); align-items: center; justify-content: center;">
+      <div style="position: relative; max-width: 560px; width: 92%; max-height: 85vh; overflow-y: auto; background: #171e28; border: 1px solid #ffffff24; border-radius: 16px; padding: 24px; color: #cbd5e1; font-size: 12px; line-height: 1.6; box-shadow: 0 20px 50px rgba(0,0,0,0.85);">
+        <button id="about-close" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer;">✕</button>
+        <h2 style="margin: 0 0 10px; font-size: 18px; color: #f8fafc; font-weight: 650;">Bengaluru 3D — Data Sources & Attribution</h2>
+        <p style="margin-bottom: 14px; color: #94a3b8;">Built from open map data. This project fuses open geospatial datasets into an interactive 3D WebGL viewer of Bengaluru.</p>
+        
+        <h3 style="font-size: 13px; color: #f1f5f9; margin: 14px 0 6px;">Data Sources & Attribution</h3>
+        <ul style="padding-left: 18px; margin: 0 0 14px; display: flex; flex-direction: column; gap: 8px;">
+          <li><strong>OpenStreetMap:</strong> OpenStreetMap contributors (ODbL). Transit routes, track alignment, stations, and street centrelines.</li>
+          <li><strong>Overture Maps:</strong> Overture Maps Foundation release 2026-10-21.0 (ODbL / CDLA Permissive 2.0). 3D building polygons and transportation base.</li>
+          <li><strong>GHSL (JRC):</strong> European Commission JRC Global Human Settlement Layer GHS-BUILT-H 2018 raster (CC BY 4.0).</li>
+          <li><strong>Copernicus DEM:</strong> Copernicus GLO-30 Digital Elevation Model (European Union / ESA). 30 m elevation raster.</li>
+          <li><strong>Rendering:</strong> Three.js 3D WebGL library.</li>
+        </ul>
+
+        <h3 style="font-size: 13px; color: #f1f5f9; margin: 14px 0 6px;">Methodology & Disclaimers</h3>
+        <p style="margin: 0 0 8px;">• <strong>GHSL Epoch (2018) & Corroboration:</strong> The GHSL raster reflects the 2018 epoch (~90 m cells). For newer high-rises constructed after 2018, height tags that agree within 20% of their floor-count estimate (floors × 3.2 m, both ≥ 80 m) are preserved and marked as <em>Corroborated by Floors</em>. Tall tags without floor corroboration remain flagged with an <em>Uncertain Height</em> warning badge.</p>
+        <p style="margin: 0 0 8px;">• <strong>Namma Metro Network:</strong> Viaduct guideways use a standard assumed clearance of 8m (METRO_VIADUCT_M = 8.0) above DEM terrain. The Pink Line elevated section (Kalena Agrahara to Tavarekere, 6 stations, with Jayadeva as a two-level interchange) opened on 13 Nov 2026 and is included as operational. Metro trains are illustrative, not live.</p>
+        <p style="margin: 0;">• <strong>Verified Landmarks:</strong> Only named public landmarks (such as Vidhana Soudha, World Trade Center, Chinnaswamy Stadium) use ground-truth verified heights.</p>
+      </div>
+    </div>
+
+    <script type="module">
+      import * as THREE from "three";
+      window.THREE = THREE;
+      import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+
+      const APP_VERSION = "20261122.1";
+      const ORIGIN_LON = 77.5946;
+      const ORIGIN_LAT = 12.9716;
+      const METERS_PER_DEGREE_LON = 111319.49079327358 * Math.cos(ORIGIN_LAT * Math.PI / 180);
+      const METERS_PER_DEGREE_LAT = 110574;
+      const CHUNK_SIZE = 1000;
+      const sceneElement = document.querySelector("#scene");
+      const statusElement = document.querySelector("#status");
+      const chunkCountElement = document.querySelector("#chunk-count");
+      const buildingCountElement = document.querySelector("#building-count");
+      const datasetElement = document.querySelector("#dataset");
+      const fpsElement = document.querySelector("#fps");
+      const renderStatsElement = document.querySelector("#render-stats");
+      const timeSlider = document.querySelector("#time");
+      const timeLabel = document.querySelector("#time-label");
+      const radiusSlider = document.querySelector("#radius");
+      const verticalExaggerationSlider = document.querySelector("#vertical-exaggeration");
+      const verticalExaggerationLabel = document.querySelector("#vertical-exaggeration-label");
+      const radiusHash = new URLSearchParams(location.hash.slice(1)).get("radius");
+      const initialRadius = [2, 4, 6].includes(Number(radiusHash))
+        ? Number(radiusHash)
+        : 4;
+      radiusSlider.value = String(initialRadius);
+      let verticalExaggeration = Number(verticalExaggerationSlider.value);
+      const heightSourceToggle = document.querySelector("#height-source");
+
+      // Loading overlay
+      const loadingOverlay = document.querySelector("#loading-overlay");
+      const loadingBar = document.querySelector("#loading-bar");
+      const loadingProgress = document.querySelector("#loading-progress");
+      let overlayDismissed = false;
+      function updateLoadingOverlay(loaded, total) {
+        if (overlayDismissed) return;
+        if (total > 0) {
+          const pct = Math.min(100, Math.round((loaded / total) * 100));
+          loadingBar.style.width = pct + "%";
+          loadingProgress.textContent = loaded === 0
+            ? "Downloading manifest…"
+            : `Loading chunks: ${loaded} / ${total}`;
+          if (loaded >= 1 && !overlayDismissed) {
+            overlayDismissed = true;
+            loadingOverlay.classList.add("hidden");
+          }
+        } else {
+          loadingProgress.textContent = "Downloading manifest…";
+        }
+      }
+      const landmarkListElement = document.querySelector("#landmark-list");
+      const landmarkStatusElement = document.querySelector("#landmark-status");
+      const landmarkLabelElement = document.querySelector("#landmark-label");
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color("#10161e");
+
+      const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 100000);
+      const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+      renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      renderer.setSize(innerWidth, innerHeight);
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.15;
+      sceneElement.appendChild(renderer.domElement);
+
+      const controls = new OrbitControls(camera, renderer.domElement);
+      controls.target.set(0, 0, 0);
+      controls.enableDamping = true;
+      controls.dampingFactor = 0.06;
+      controls.maxPolarAngle = Math.PI * 0.49;
+
+      scene.add(new THREE.HemisphereLight("#b5c5df", "#283039", 1.45));
+      const moon = new THREE.DirectionalLight("#f4c98c", 1.8);
+      moon.position.set(-3500, 6000, 2500);
+      scene.add(moon);
+
+      const groundMaterial = new THREE.MeshStandardMaterial({ color: "#2d3748", roughness: 0.94 });
+      const terrainMaterial = new THREE.MeshStandardMaterial({
+        color: "#2d3748", roughness: 0.97, side: THREE.DoubleSide,
+      });
+      const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), groundMaterial);
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.y = -2;
+      scene.add(ground);
+
+      let nightLevel = 0;
+      let heightSourceDebug = false;
+      let windowShader;
+      const buildingMaterial = new THREE.MeshStandardMaterial({
+        color: "#8794a0", roughness: 0.78, metalness: 0.08, vertexColors: true,
+      });
+      const buildingSourceColors = [
+        new THREE.Color("#4fc4a2"),
+        new THREE.Color("#68a6ff"),
+        new THREE.Color("#eb7676"),
+        new THREE.Color("#ffc54a"),
+        new THREE.Color("#ff6cf0"),
+        new THREE.Color("#f28e5b"),
+        new THREE.Color("#a855f7"),
+      ];
+      buildingMaterial.onBeforeCompile = shader => {
+        shader.uniforms.uNight = { value: nightLevel };
+        shader.uniforms.uHeightSourceDebug = { value: heightSourceDebug ? 1 : 0 };
+        shader.vertexShader = shader.vertexShader
+          .replace(
+            "#include <common>",
+            "#include <common>\nvarying vec3 vCityWorldPosition;\nvarying vec3 vCityWorldNormal;",
+          )
+          .replace(
+            "#include <worldpos_vertex>",
+            "#include <worldpos_vertex>\nvCityWorldPosition = (modelMatrix * vec4(transformed, 1.0)).xyz;\nvCityWorldNormal = normalize(mat3(modelMatrix) * objectNormal);",
+          );
+        shader.fragmentShader = shader.fragmentShader
+          .replace(
+            "#include <common>",
+            "#include <common>\nuniform float uNight;\nuniform float uHeightSourceDebug;\nvarying vec3 vCityWorldPosition;\nvarying vec3 vCityWorldNormal;",
+          )
+          .replace(
+            "#include <color_fragment>",
+            "#include <color_fragment>\ndiffuseColor.rgb = mix(vec3(0.53, 0.58, 0.63), vColor, uHeightSourceDebug);",
+          )
+          .replace(
+            "#include <opaque_fragment>",
+            `float cityFacade = 1.0 - smoothstep(0.25, 0.75, abs(normalize(vCityWorldNormal).y));
+            float cityAlong = abs(vCityWorldNormal.x) > abs(vCityWorldNormal.z)
+              ? vCityWorldPosition.z : vCityWorldPosition.x;
+            vec2 cityCell = vec2(cityAlong / 5.0, vCityWorldPosition.y / 3.6);
+            vec2 cityTile = fract(cityCell);
+            vec2 cityCellId = floor(cityCell);
+            float cityRandom = fract(sin(dot(cityCellId, vec2(12.9898, 78.233))) * 43758.5453);
+            float cityWindow = step(0.14, cityTile.x) * step(0.14, cityTile.y)
+              * step(cityTile.x, 0.82) * step(cityTile.y, 0.82)
+              * step(0.34, cityRandom) * cityFacade;
+            outgoingLight += vec3(1.0, 0.52, 0.2) * cityWindow * uNight;
+            #include <opaque_fragment>`,
+          );
+        windowShader = shader;
+      };
+
+      const waterMaterial = new THREE.MeshStandardMaterial({
+        color: "#0284c7", roughness: 0.25, metalness: 0.1, side: THREE.DoubleSide,
+      });
+      const greenMaterial = new THREE.MeshStandardMaterial({
+        color: "#22c55e", roughness: 0.92, side: THREE.DoubleSide,
+      });
+      const waterLineMaterial = new THREE.MeshBasicMaterial({ color: "#0284c7" });
+      const roadMaterial = new THREE.MeshStandardMaterial({
+        color: "#f1f5f9", roughness: 0.8, metalness: 0.05, side: THREE.DoubleSide,
+        polygonOffset: true, polygonOffsetFactor: -2.0, polygonOffsetUnits: -4.0,
+      });
+      const buildingGroup = new THREE.Group();
+      const groundGroup = new THREE.Group();
+      const terrainGroup = new THREE.Group();
+      const selectionGroup = new THREE.Group();
+      scene.add(terrainGroup, buildingGroup, groundGroup, selectionGroup);
+
+      const dayTerrain = new THREE.Color("#2d3748");
+      const nightTerrain = new THREE.Color("#111827");
+      const dayGreen = new THREE.Color("#22c55e");
+      const nightGreen = new THREE.Color("#14381e");
+      const dayWater = new THREE.Color("#0284c7");
+      const nightWater = new THREE.Color("#0b3252");
+      const dayRoad = new THREE.Color("#f1f5f9");
+      const nightRoad = new THREE.Color("#fed7aa");
+      const nightRoadEmissive = new THREE.Color("#f59e0b");
+
+      function updateActivePreset() {
+        const val = Number(timeSlider.value);
+        const btnDay = document.querySelector("#preset-day");
+        const btnGolden = document.querySelector("#preset-golden");
+        const btnNight = document.querySelector("#preset-night");
+        if (!btnDay || !btnGolden || !btnNight) return;
+        btnDay.classList.toggle("active", Math.abs(val - 38) <= 4);
+        btnGolden.classList.toggle("active", Math.abs(val - 72) <= 4);
+        btnNight.classList.toggle("active", Math.abs(val - 94) <= 4);
+      }
+
+      function setTime(value) {
+        const progress = Number(value) / 100;
+        const totalMinutes = Math.round((6 * 60 + progress * 16 * 60) / 10) * 10;
+        timeLabel.textContent = `${String(Math.floor(totalMinutes / 60) % 24).padStart(2, "0")}:${String(totalMinutes % 60).padStart(2, "0")}`;
+        nightLevel = Math.max(0, Math.min(1, (progress - 0.52) * 2.3));
+        if (windowShader) windowShader.uniforms.uNight.value = nightLevel;
+        scene.background.set("#10161e").lerp(new THREE.Color("#526b85"), 1 - nightLevel);
+        moon.intensity = 0.75 + (1 - nightLevel) * 1.7;
+        waterMaterial.color.copy(dayWater).lerp(nightWater, nightLevel);
+        greenMaterial.color.copy(dayGreen).lerp(nightGreen, nightLevel);
+        terrainMaterial.color.copy(dayTerrain).lerp(nightTerrain, nightLevel);
+        groundMaterial.color.copy(dayTerrain).lerp(nightTerrain, nightLevel);
+        roadMaterial.color.copy(dayRoad).lerp(nightRoad, nightLevel);
+        if (nightLevel > 0.05) {
+          roadMaterial.emissive.copy(nightRoadEmissive);
+          roadMaterial.emissiveIntensity = 0.45 * nightLevel;
+        } else {
+          roadMaterial.emissive.set("#000000");
+          roadMaterial.emissiveIntensity = 0.0;
+        }
+        waterLineMaterial.color.copy(dayWater).lerp(nightWater, nightLevel);
+        for (const matShader of metroMaterials) {
+          if (matShader.uniforms?.uNight) matShader.uniforms.uNight.value = nightLevel;
+        }
+        updateActivePreset();
+      }
+
+      const buildQueue = [];
+      let nextBuildId = 0;
+      function dispatchBuildQueue() {
+        for (const slot of buildWorkers) {
+          if (slot.failed || slot.current || !buildQueue.length) continue;
+          const job = buildQueue.shift();
+          slot.current = job;
+          try {
+            slot.worker.postMessage({ ...job.payload, id: job.id });
+          } catch (error) {
+            slot.current = null;
+            job.reject(error);
+          }
+        }
+        if (buildWorkers.every(slot => slot.failed)) {
+          while (buildQueue.length) {
+            buildQueue.shift().reject(new Error("All chunk geometry workers failed."));
+          }
+        }
+      }
+
+      function createBuildWorker() {
+        const slot = {
+          worker: new Worker(new URL("./chunk-worker.js?v=5", import.meta.url), { type: "module" }),
+          current: null,
+          failed: false,
+        };
+        slot.worker.onmessage = event => {
+          const job = slot.current;
+          if (!job || event.data.id !== job.id) return;
+          slot.current = null;
+          if (event.data.error) job.reject(new Error(event.data.error));
+          else job.resolve(event.data.result);
+          dispatchBuildQueue();
+        };
+        slot.worker.onerror = event => {
+          event.preventDefault();
+          slot.failed = true;
+          slot.worker.terminate();
+          if (slot.current) {
+            slot.current.reject(new Error(event.message || "Chunk geometry worker failed."));
+            slot.current = null;
+          }
+          console.error("Chunk geometry worker failed:", event.message);
+          dispatchBuildQueue();
+        };
+        return slot;
+      }
+
+      const buildWorkers = Array.from({ length: 2 }, createBuildWorker);
+
+      function buildChunkGeometry(payload) {
+        return new Promise((resolve, reject) => {
+          buildQueue.push({ id: ++nextBuildId, payload, resolve, reject });
+          dispatchBuildQueue();
+        });
+      }
+
+      function restoreGeometry(data, material, name) {
+        if (!data) return null;
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute(
+          "position",
+          new THREE.BufferAttribute(data.position, 3),
+        );
+        geometry.setAttribute(
+          "normal",
+          new THREE.BufferAttribute(data.normal, 3),
+        );
+        if (data.color) {
+          geometry.setAttribute(
+            "color",
+            new THREE.BufferAttribute(data.color, 3, data.colorNormalized),
+          );
+        }
+        if (data.index) geometry.setIndex(new THREE.BufferAttribute(data.index, 1));
+        if (data.sphere) {
+          geometry.boundingSphere = new THREE.Sphere(
+            new THREE.Vector3(data.sphere[0], data.sphere[1], data.sphere[2]),
+            data.sphere[3],
+          );
+        }
+        const mesh = new THREE.Mesh(geometry, material);
+        mesh.name = name;
+        mesh.frustumCulled = true;
+        return mesh;
+      }
+
+      function restoreChunkGeometry(result, key) {
+        return {
+          buildingMesh: restoreGeometry(
+            result.building,
+            buildingMaterial,
+            `buildings-${key}`,
+          ),
+          buildingBounds: result.bounds,
+          terrainMesh: restoreGeometry(
+            result.ground.terrain,
+            terrainMaterial,
+            `terrain-${key}`,
+          ),
+          groundMeshes: [
+            restoreGeometry(result.ground.water, waterMaterial, `ground-${key}-water`),
+            restoreGeometry(result.ground.waterLines, waterLineMaterial, `ground-${key}-water-lines`),
+            restoreGeometry(result.ground.green, greenMaterial, `ground-${key}-green`),
+            restoreGeometry(result.ground.roads, roadMaterial, `ground-${key}-roads`),
+          ].filter(Boolean),
+        };
+      }
+
+      function disposeChunk(state) {
+        if (state.buildingMesh) {
+          buildingGroup.remove(state.buildingMesh);
+          state.buildingMesh.geometry.dispose();
+        }
+        if (state.terrainMesh) {
+          terrainGroup.remove(state.terrainMesh);
+          state.terrainMesh.geometry.dispose();
+        }
+        for (const mesh of state.groundMeshes) {
+          groundGroup.remove(mesh);
+          mesh.geometry.dispose();
+        }
+      }
+
+      function projectedBounds(bounds) {
+        const [west, south, east, north] = bounds;
+        const x0 = (west - ORIGIN_LON) * METERS_PER_DEGREE_LON;
+        const x1 = (east - ORIGIN_LON) * METERS_PER_DEGREE_LON;
+        const y0 = (south - ORIGIN_LAT) * METERS_PER_DEGREE_LAT;
+        const y1 = (north - ORIGIN_LAT) * METERS_PER_DEGREE_LAT;
+        return Math.max(Math.abs(x0), Math.abs(x1), Math.abs(y0), Math.abs(y1), CHUNK_SIZE);
+      }
+
+      let manifest;
+      let chunks = [];
+      let loadedRadius = Number(radiusSlider.value) * 1000;
+      let eligibleCount = 0;
+      let desiredKeys = new Set();
+      let refreshTimer;
+      let lastHudUpdate = 0;
+      let fpsFrames = 0;
+      let fpsStart = performance.now();
+      const loadedChunks = new Map();
+      window.loadedChunks = loadedChunks;
+      const loadingChunks = new Set();
+      const failedChunks = new Set();
+      const terrainGridCache = new Map();
+      const pendingTextRequests = new Map();
+      const chunkFrustum = new THREE.Frustum();
+      const projectionView = new THREE.Matrix4();
+      const buildingSphere = new THREE.Sphere(new THREE.Vector3(), 0);
+
+      function chunkKey(chunk) {
+        return `${chunk.ix},${chunk.iy}`;
+      }
+
+      function chunkCenter(chunk) {
+        return {
+          x: (chunk.ix + 0.5) * CHUNK_SIZE,
+          z: -(chunk.iy + 0.5) * CHUNK_SIZE,
+        };
+      }
+
+      function chunkDistance(chunk) {
+        const center = chunkCenter(chunk);
+        return Math.hypot(center.x - controls.target.x, center.z - controls.target.z);
+      }
+
+      function initialChunkLod(distance) {
+        return distance < 1500 ? "near" : distance <= 4000 ? "mid" : "far";
+      }
+
+      function nextChunkLod(current, distance) {
+        if (current === "near") return distance > 1650 ? (distance > 4200 ? "far" : "mid") : "near";
+        if (current === "mid") {
+          if (distance < 1350) return "near";
+          return distance > 4200 ? "far" : "mid";
+        }
+        return distance < 3800 ? (distance < 1350 ? "near" : "mid") : "far";
+      }
+
+      function updateVisibleBuildingCount() {
+        camera.updateMatrixWorld();
+        projectionView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse);
+        chunkFrustum.setFromProjectionMatrix(projectionView);
+        let visibleBuildings = 0;
+        for (const state of loadedChunks.values()) {
+          for (let index = 0; index + 3 < state.buildingBounds.length; index += 4) {
+            buildingSphere.center.set(
+              state.buildingBounds[index],
+              state.buildingBounds[index + 1],
+              state.buildingBounds[index + 2],
+            );
+            buildingSphere.radius = state.buildingBounds[index + 3];
+            if (chunkFrustum.intersectsSphere(buildingSphere)) {
+              visibleBuildings++;
+            }
+          }
+        }
+        buildingCountElement.textContent = visibleBuildings.toLocaleString();
+      }
+
+      function updateHud() {
+        chunkCountElement.textContent = `${loadedChunks.size} / ${eligibleCount}`;
+        renderStatsElement.textContent =
+          `${renderer.info.render.calls.toLocaleString()} / ${renderer.info.render.triangles.toLocaleString()}`;
+        updateVisibleBuildingCount();
+        updateLoadingOverlay(loadedChunks.size, eligibleCount);
+      }
+
+      function scheduleChunkRefresh() {
+        if (refreshTimer) return;
+        refreshTimer = window.setTimeout(() => {
+          refreshTimer = undefined;
+          refreshChunkSet();
+        }, 80);
+      }
+
+      function setHeightSourceDebug(enabled) {
+        heightSourceDebug = enabled;
+        if (windowShader) {
+          windowShader.uniforms.uHeightSourceDebug.value = enabled ? 1 : 0;
+        }
+      }
+
+      function flyToLocation(lat, lon, label, aerial = false, altitudeOverride = null) {
+        const x = (lon - ORIGIN_LON) * METERS_PER_DEGREE_LON;
+        const north = (lat - ORIGIN_LAT) * METERS_PER_DEGREE_LAT;
+        const startTarget = controls.target.clone();
+        const startPosition = camera.position.clone();
+        const duration = 1500;
+        if (label) {
+          landmarkLabelElement.textContent = label;
+          landmarkLabelElement.style.display = "block";
+        }
+        getTerrainElevationAtLocal(x, north).then(baseElevation => {
+          const startTime = performance.now();
+          const endTarget = new THREE.Vector3(x, baseElevation, -north);
+          const horizontalOffset = aerial ? 1500 : 650;
+          const altitude = Number.isFinite(altitudeOverride)
+            ? altitudeOverride
+            : aerial
+              ? 2200
+              : 520;
+          const endPosition = new THREE.Vector3(
+            x + horizontalOffset,
+            baseElevation + altitude,
+            -north + horizontalOffset,
+          );
+          function animateFlight(now) {
+            const progress = Math.min(1, (now - startTime) / duration);
+            const eased = progress * progress * (3 - 2 * progress);
+            controls.target.copy(startTarget).lerp(endTarget, eased);
+            camera.position.copy(startPosition).lerp(endPosition, eased);
+            controls.update();
+            if (progress < 1) requestAnimationFrame(animateFlight);
+          }
+          requestAnimationFrame(animateFlight);
+        }).catch(error => {
+          statusElement.textContent = error.message || "Could not read terrain elevation.";
+          statusElement.classList.add("error");
+          console.error(error);
+        });
+      }
+      window.flyToLocation = flyToLocation;
+      window.controls = controls;
+      window.camera = camera;
+
+      function flyToLandmark(landmark) {
+        if (!Number.isFinite(landmark.lat) || !Number.isFinite(landmark.lon)) return;
+        const hasVerifiedHeight = landmark.verified === true && Number.isFinite(landmark.height_m);
+        const label = hasVerifiedHeight
+          ? `${landmark.name} · ${Number(landmark.height_m).toLocaleString()} m`
+          : `${landmark.name}`;
+        flyToLocation(landmark.lat, landmark.lon, label, false);
+      }
+
+      async function loadLandmarks() {
+        const response = await fetch(`data/landmarks.json?v=${APP_VERSION}`, { cache: "no-cache" });
+        if (!response.ok) {
+          throw new Error(`Could not load landmarks.json (HTTP ${response.status}).`);
+        }
+        const landmarks = await response.json();
+        if (!Array.isArray(landmarks)) {
+          throw new Error("landmarks.json must contain an array.");
+        }
+        loadedLandmarksList = landmarks;
+        landmarkListElement.replaceChildren();
+
+        const CATEGORIES = [
+          { id: "tech park", title: "Tech Parks" },
+          { id: "civic", title: "Civic" },
+          { id: "heritage", title: "Heritage" },
+          { id: "mall", title: "Malls" },
+          { id: "stadium", title: "Stadiums" },
+          { id: "airport", title: "Airport" },
+        ];
+
+        const grouped = {};
+        for (const cat of CATEGORIES) grouped[cat.id] = [];
+        for (const l of landmarks) {
+          const cat = (l.category || "civic").toLowerCase();
+          if (!grouped[cat]) grouped[cat] = [];
+          grouped[cat].push(l);
+        }
+
+        let totalValid = 0;
+        let verifiedCount = 0;
+
+        for (const cat of CATEGORIES) {
+          const items = grouped[cat.id];
+          if (!items || !items.length) continue;
+
+          const title = document.createElement("div");
+          title.className = "landmark-category-title";
+          title.innerHTML = `<span>${cat.title}</span><span style="opacity:0.6">${items.length}</span>`;
+          landmarkListElement.appendChild(title);
+
+          const groupContainer = document.createElement("div");
+          groupContainer.className = "landmark-category-group";
+
+          for (const landmark of items) {
+            const hasCoords = Number.isFinite(landmark.lat) && Number.isFinite(landmark.lon);
+            const isVerified = landmark.verified === true && Number.isFinite(landmark.height_m);
+            if (isVerified) verifiedCount++;
+            if (hasCoords) totalValid++;
+
+            const button = document.createElement("button");
+            button.type = "button";
+            button.className = "landmark-button";
+            button.disabled = !hasCoords;
+
+            const nameSpan = document.createElement("span");
+            nameSpan.className = "landmark-name";
+            nameSpan.textContent = landmark.name;
+            nameSpan.title = landmark.name;
+            button.appendChild(nameSpan);
+
+            const tag = document.createElement("span");
+            tag.className = `landmark-tag ${isVerified ? "verified" : "unverified"}`;
+            tag.textContent = isVerified ? `${landmark.height_m} m` : "Fly to";
+            button.appendChild(tag);
+
+            button.addEventListener("click", () => flyToLandmark(landmark));
+            groupContainer.appendChild(button);
+          }
+          landmarkListElement.appendChild(groupContainer);
+        }
+
+        landmarkStatusElement.textContent =
+          `${totalValid} landmarks · ${verifiedCount} verified heights`;
+      }
+
+      const metroMaterials = [];
+
+      async function fetchJSON(filename) {
+        if (!filename) return null;
+        const text = await fetchText(filename);
+        return text ? JSON.parse(text) : null;
+      }
+
+      async function fetchText(filename) {
+        if (!filename) return null;
+        const pending = pendingTextRequests.get(filename);
+        if (pending) return pending;
+        const request = (async () => {
+          // Cloudflare Pages serves pre-compressed automatically; append cache-busting version
+          const response = await fetch(`data/${encodeURIComponent(filename)}?v=${APP_VERSION}`, {
+            cache: "force-cache",
+          });
+          if (!response.ok) {
+            throw new Error(`Could not load ${filename} (HTTP ${response.status}).`);
+          }
+          return response.text();
+        })();
+        pendingTextRequests.set(filename, request);
+        try {
+          return await request;
+        } finally {
+          if (pendingTextRequests.get(filename) === request) {
+            pendingTextRequests.delete(filename);
+          }
+        }
+      }
+
+      async function getTerrainElevationAtLocal(x, north) {
+        const ix = Math.floor(x / CHUNK_SIZE);
+        const iy = Math.floor(north / CHUNK_SIZE);
+        const chunk = chunks.find(item => item.ix === ix && item.iy === iy);
+        if (!chunk?.terrainFile) return 0;
+        const key = chunkKey(chunk);
+        let grid = terrainGridCache.get(key);
+        if (!grid) {
+          const state = loadedChunks.get(key);
+          const text = state?.terrainText || await fetchText(chunk.terrainFile);
+          const terrain = JSON.parse(text);
+          grid = {
+            width: terrain.width,
+            height: terrain.height,
+            heights: terrain.heights,
+          };
+          terrainGridCache.set(key, grid);
+        }
+        const scaleX = grid.width - 1;
+        const scaleY = grid.height - 1;
+        const fx = Math.max(0, Math.min(scaleX, (x / CHUNK_SIZE - ix) * scaleX));
+        const fy = Math.max(0, Math.min(scaleY, (north / CHUNK_SIZE - iy) * scaleY));
+        const x0 = Math.floor(fx), y0 = Math.floor(fy);
+        const x1 = Math.min(scaleX, x0 + 1), y1 = Math.min(scaleY, y0 + 1);
+        const tx = fx - x0, ty = fy - y0;
+        const at = (col, row) => grid.heights[row * grid.width + col];
+        const lower = at(x0, y0) * (1 - tx) + at(x1, y0) * tx;
+        const upper = at(x0, y1) * (1 - tx) + at(x1, y1) * tx;
+        return (lower * (1 - ty) + upper * ty) * verticalExaggeration;
+      }
+
+      function removeBuildingMesh(state) {
+        if (state.buildingMesh) {
+          buildingGroup.remove(state.buildingMesh);
+          state.buildingMesh.geometry.dispose();
+          state.buildingMesh = null;
+        }
+        state.buildingBounds = new Float32Array();
+      }
+
+      function requestChunkLod(state, lod) {
+        if (state.pendingLod === lod) return;
+        if (state.lod === lod) {
+          state.lodGeneration = (state.lodGeneration || 0) + 1;
+          state.pendingLod = null;
+          return;
+        }
+        state.lodGeneration = (state.lodGeneration || 0) + 1;
+        const generation = state.lodGeneration;
+        state.pendingLod = null;
+        if (lod === "far" || !state.chunk.buildingFile || !state.chunk.buildingCount) {
+          removeBuildingMesh(state);
+          state.lod = lod;
+          updateHud();
+          return;
+        }
+        state.pendingLod = lod;
+        const exaggeration = verticalExaggeration;
+        const buildingTextPromise = state.buildingText
+          ? Promise.resolve(state.buildingText)
+          : fetchText(state.chunk.buildingFile).then(text => {
+            state.buildingText = text;
+            return text;
+          });
+        buildingTextPromise
+          .then(buildingsText => buildChunkGeometry({
+            buildingsText,
+            groundText: null,
+            terrainText: state.terrainText,
+            buildingBases: null,
+            ix: state.chunk.ix,
+            iy: state.chunk.iy,
+            lod,
+            lodOnly: true,
+            exaggeration,
+          }))
+          .then(result => {
+            if (loadedChunks.get(chunkKey(state.chunk)) !== state ||
+                state.lodGeneration !== generation) return;
+            removeBuildingMesh(state);
+            state.buildingMesh = restoreGeometry(
+              result.building,
+              buildingMaterial,
+              `buildings-${chunkKey(state.chunk)}-${lod}`,
+            );
+            state.buildingBounds = result.bounds;
+            state.lod = lod;
+            state.pendingLod = null;
+            state.exaggeration = exaggeration;
+            if (state.buildingMesh) buildingGroup.add(state.buildingMesh);
+            if (exaggeration !== verticalExaggeration) {
+              rebuildLoadedChunk(state);
+            }
+            updateHud();
+          })
+          .catch(error => {
+            if (state.lodGeneration !== generation) return;
+            state.pendingLod = null;
+            statusElement.textContent = error.message || "Could not rebuild chunk LOD.";
+            statusElement.classList.add("error");
+            console.error(error);
+          });
+      }
+
+      async function rebuildLoadedChunk(state) {
+        state.lodGeneration = (state.lodGeneration || 0) + 1;
+        state.pendingLod = null;
+        state.rebuildGeneration = (state.rebuildGeneration || 0) + 1;
+        const generation = state.rebuildGeneration;
+        const exaggeration = verticalExaggeration;
+        try {
+          const buildingsText = state.lod !== "far" && state.chunk.buildingCount
+            ? state.buildingText
+            : null;
+          const groundText = state.groundText;
+          const terrainText = state.terrainText;
+          if (!groundText) throw new Error(`Ground data is missing for ${chunkKey(state.chunk)}.`);
+          if (state.chunk.terrainFile && !terrainText) {
+            throw new Error(`Terrain data is missing for ${chunkKey(state.chunk)}.`);
+          }
+          const result = await buildChunkGeometry({
+            buildingsText,
+            groundText,
+            terrainText,
+            buildingBases: null,
+            ix: state.chunk.ix,
+            iy: state.chunk.iy,
+            lod: state.lod,
+            lodOnly: false,
+            exaggeration,
+          });
+          if (loadedChunks.get(chunkKey(state.chunk)) !== state ||
+              state.rebuildGeneration !== generation) return;
+          const meshes = restoreChunkGeometry(result, chunkKey(state.chunk));
+          disposeChunk(state);
+          Object.assign(state, meshes, { groundText, terrainText, exaggeration });
+          if (state.buildingMesh) buildingGroup.add(state.buildingMesh);
+          if (state.terrainMesh) terrainGroup.add(state.terrainMesh);
+          for (const mesh of state.groundMeshes) groundGroup.add(mesh);
+          updateHud();
+          if (exaggeration !== verticalExaggeration) rebuildLoadedChunk(state);
+        } catch (error) {
+          if (state.rebuildGeneration !== generation) return;
+          statusElement.textContent = error.message || "Could not rebuild terrain geometry.";
+          statusElement.classList.add("error");
+          console.error(error);
+        }
+      }
+
+      function updateChunkLods() {
+        for (const state of loadedChunks.values()) {
+          const targetLod = nextChunkLod(state.lod, chunkDistance(state.chunk));
+          if (targetLod !== state.lod || state.pendingLod) {
+            requestChunkLod(state, targetLod);
+          }
+        }
+      }
+
+      async function loadChunk(chunk) {
+        const key = chunkKey(chunk);
+        loadingChunks.add(key);
+        statusElement.classList.remove("error");
+        statusElement.textContent = `Loading nearby chunk ${key}…`;
+        try {
+          const lod = initialChunkLod(chunkDistance(chunk));
+          const buildingsText = chunk.buildingCount && lod !== "far"
+            ? await fetchText(chunk.buildingFile)
+            : null;
+          const groundText = await fetchText(chunk.groundFile);
+          const terrainText = await fetchText(chunk.terrainFile);
+          if (!desiredKeys.has(key)) return;
+          const result = await buildChunkGeometry({
+            buildingsText,
+            groundText,
+            terrainText,
+            buildingBases: null,
+            ix: chunk.ix,
+            iy: chunk.iy,
+            lod,
+            lodOnly: false,
+            exaggeration: verticalExaggeration,
+          });
+          if (!desiredKeys.has(key)) return;
+          const meshes = restoreChunkGeometry(result, key);
+          const state = {
+            chunk,
+            ...meshes,
+            buildingText: buildingsText,
+            groundText,
+            terrainText,
+            lod,
+            exaggeration: verticalExaggeration,
+            pendingLod: null,
+            lodGeneration: 0,
+            rebuildGeneration: 0,
+          };
+          if (state.buildingMesh) buildingGroup.add(state.buildingMesh);
+          if (state.terrainMesh) terrainGroup.add(state.terrainMesh);
+          for (const mesh of state.groundMeshes) groundGroup.add(mesh);
+          loadedChunks.set(key, state);
+          if (state.exaggeration !== verticalExaggeration) {
+            rebuildLoadedChunk(state);
+          }
+          statusElement.textContent = `Loaded ${loadedChunks.size} nearby chunks`;
+        } catch (error) {
+          failedChunks.add(key);
+          statusElement.textContent = error.message || `Could not load chunk ${key}.`;
+          statusElement.classList.add("error");
+          console.error(error);
+        } finally {
+          loadingChunks.delete(key);
+          updateHud();
+          scheduleChunkRefresh();
+        }
+      }
+
+      function refreshChunkSet() {
+        if (!manifest || !chunks.length) return;
+        const target = controls.target;
+        const candidates = chunks.map(chunk => {
+          const center = chunkCenter(chunk);
+          const dx = center.x - target.x;
+          const dz = center.z - target.z;
+          return { chunk, distance: Math.hypot(dx, dz) };
+        }).filter(item => item.distance <= loadedRadius)
+          .sort((a, b) => a.distance - b.distance);
+        eligibleCount = candidates.length;
+        desiredKeys = new Set(candidates.map(item => chunkKey(item.chunk)));
+
+        for (const [key, state] of loadedChunks) {
+          if (!desiredKeys.has(key)) {
+            state.lodGeneration += 1;
+            state.rebuildGeneration += 1;
+            disposeChunk(state);
+            loadedChunks.delete(key);
+          }
+        }
+        updateChunkLods();
+        updateHud();
+
+        let activeLoads = loadingChunks.size;
+        for (const { chunk } of candidates) {
+          const key = chunkKey(chunk);
+          if (activeLoads >= 2) break;
+          if (!loadedChunks.has(key) && !loadingChunks.has(key) && !failedChunks.has(key)) {
+            loadChunk(chunk);
+            activeLoads += 1;
+          }
+        }
+        if (loadedChunks.size === eligibleCount) {
+          statusElement.textContent =
+            `Loaded ${loadedChunks.size} nearby chunks · ${loadedRadius / 1000} km radius`;
+        }
+      }
+
+      async function loadCity() {
+        const response = await fetch(`data/manifest.json?v=${APP_VERSION}`, { cache: "no-cache" });
+        if (!response.ok) throw new Error("No city data found. Build data from data/ first.");
+        manifest = await response.json();
+        if (!Array.isArray(manifest.chunks) || !manifest.chunks.length) {
+          throw new Error("The data manifest contains no building or ground chunks.");
+        }
+        chunks = manifest.chunks.map(chunk => ({
+          ...chunk,
+          buildingFile: chunk.buildingFile || chunk.name || null,
+          buildingCount: chunk.buildingCount ?? chunk.count ?? 0,
+          groundFile: chunk.groundFile || null,
+          terrainFile: chunk.terrainFile || null,
+        }));
+        const extent = projectedBounds(manifest.bounds);
+        ground.geometry.dispose();
+        ground.geometry = new THREE.PlaneGeometry(extent * 4.5, extent * 4.5);
+        const weight = chunk => chunk.buildingCount +
+          Object.values(chunk.groundCounts || {}).reduce((sum, count) => sum + count, 0);
+        const totalWeight = chunks.reduce((sum, chunk) => sum + weight(chunk), 0);
+        const centerX = chunks.reduce(
+          (sum, chunk) => sum + (chunk.ix + 0.5) * CHUNK_SIZE * weight(chunk),
+          0,
+        ) / totalWeight;
+        const centerY = chunks.reduce(
+          (sum, chunk) => sum + (chunk.iy + 0.5) * CHUNK_SIZE * weight(chunk),
+          0,
+        ) / totalWeight;
+
+        camera.far = extent * 10;
+        controls.minDistance = Math.max(80, extent * 0.025);
+        controls.maxDistance = extent * 6;
+
+        if (!hasRestoredViewFromHash) {
+          // Default view: golden hour over Vidhana Soudha, Cubbon Park and MG Road showing the central city
+          const targetX = 180, targetY = 620;
+          const centerElevation = await getTerrainElevationAtLocal(targetX, targetY);
+          controls.target.set(targetX, centerElevation + 20, -targetY);
+          camera.position.set(
+            targetX + 1650,
+            centerElevation + 1400,
+            -targetY + 1550,
+          );
+        }
+        camera.updateProjectionMatrix();
+        controls.update();
+
+        if (manifest.terrain) {
+          ground.position.y = manifest.terrain.minElevationMeters * verticalExaggeration - 2;
+        }
+        datasetElement.textContent = String(manifest.source);
+        refreshChunkSet();
+
+        const focusParams = new URLSearchParams(location.search);
+        const focus = focusParams.get("focus");
+        if (focus) {
+          const [lat, lon] = focus.split(",").map(Number);
+          const altitude = Number(focusParams.get("altitude"));
+          if (Number.isFinite(lat) && Number.isFinite(lon)) {
+            flyToLocation(
+              lat,
+              lon,
+              "Map focus · height not verified",
+              true,
+              Number.isFinite(altitude) && altitude > 0 ? altitude : null,
+            );
+          }
+        }
+      }
+
+      // Time Presets and Sliders
+      const presetDayBtn = document.querySelector("#preset-day");
+      const presetGoldenBtn = document.querySelector("#preset-golden");
+      const presetNightBtn = document.querySelector("#preset-night");
+
+      if (presetDayBtn) {
+        presetDayBtn.addEventListener("click", () => {
+          timeSlider.value = "38";
+          setTime(38);
+          scheduleHashUpdate();
+        });
+      }
+      if (presetGoldenBtn) {
+        presetGoldenBtn.addEventListener("click", () => {
+          timeSlider.value = "72";
+          setTime(72);
+          scheduleHashUpdate();
+        });
+      }
+      if (presetNightBtn) {
+        presetNightBtn.addEventListener("click", () => {
+          timeSlider.value = "94";
+          setTime(94);
+          scheduleHashUpdate();
+        });
+      }
+
+      timeSlider.addEventListener("input", event => {
+        setTime(event.target.value);
+        scheduleHashUpdate();
+      });
+
+      radiusSlider.addEventListener("change", event => {
+        loadedRadius = Number(event.target.value) * 1000;
+        scheduleHashUpdate();
+        refreshChunkSet();
+      });
+
+      verticalExaggerationSlider.addEventListener("change", event => {
+        const oldTargetY = controls.target.y;
+        const cameraOffset = camera.position.y - oldTargetY;
+        verticalExaggeration = Number(event.target.value);
+        verticalExaggerationLabel.textContent = `${verticalExaggeration.toFixed(1)}x`;
+        if (manifest?.terrain) {
+          ground.position.y =
+            manifest.terrain.minElevationMeters * verticalExaggeration - 2;
+        }
+        getTerrainElevationAtLocal(controls.target.x, -controls.target.z).then(base => {
+          controls.target.y = base;
+          camera.position.y = base + cameraOffset;
+        }).catch(error => {
+          statusElement.textContent = error.message || "Could not update terrain elevation.";
+          statusElement.classList.add("error");
+          console.error(error);
+        });
+        buildMetroVisuals(verticalExaggeration);
+        for (const state of loadedChunks.values()) rebuildLoadedChunk(state);
+        scheduleHashUpdate();
+      });
+
+      heightSourceToggle.addEventListener("change", event => {
+        setHeightSourceDebug(event.target.checked);
+        scheduleHashUpdate();
+      });
+
+      controls.addEventListener("end", () => {
+        scheduleHashUpdate();
+      });
+
+      // Metro Implementation
+      const metroToggle = document.querySelector("#metro-toggle");
+      const metroGroup = new THREE.Group();
+      scene.add(metroGroup);
+      let metroData = null;
+      let metroStationsData = null;
+      const metroTrains = [];
+      window.metroGroup = metroGroup;
+      window.metroTrains = metroTrains;
+
+      if (metroToggle) {
+        metroToggle.addEventListener("change", event => {
+          metroGroup.visible = event.target.checked;
+          scheduleHashUpdate();
+        });
+      }
+
+      function buildViaductMesh(tracks, viaductOffset, exaggeration) {
+        const positions = [];
+        const colors = [];
+        const normals = [];
+
+        const cUnderside = new THREE.Color("#0f172a"); // dark underside
+        const cDarkSides = new THREE.Color("#1e293b"); // dark concrete skirts
+        const halfWidth = 4.0; // 8m wide deck
+        const depth = 1.0 * exaggeration;
+
+        for (const track of tracks) {
+          const pts = track.points;
+          if (!pts || pts.length < 2) continue;
+          const cLine = new THREE.Color(track.color || "#00e5ff");
+
+          for (let i = 1; i < pts.length; i++) {
+            const [x0, y0, , g0] = pts[i - 1];
+            const [x1, y1, , g1] = pts[i];
+            const dx = x1 - x0;
+            const dy = y1 - y0;
+            const len = Math.hypot(dx, dy);
+            if (len < 0.05) continue;
+
+            const nx = -dy / len;
+            const ny = dx / len;
+
+            const deckY0 = (g0 + viaductOffset) * exaggeration;
+            const deckY1 = (g1 + viaductOffset) * exaggeration;
+            const underY0 = deckY0 - depth;
+            const underY1 = deckY1 - depth;
+
+            const t0Lx = x0 - nx * halfWidth, t0Lz = -(y0 - ny * halfWidth);
+            const t0Rx = x0 + nx * halfWidth, t0Rz = -(y0 + ny * halfWidth);
+            const t1Lx = x1 - nx * halfWidth, t1Lz = -(y1 - ny * halfWidth);
+            const t1Rx = x1 + nx * halfWidth, t1Rz = -(y1 + ny * halfWidth);
+
+            const b0Lx = x0 - nx * (halfWidth * 0.8), b0Lz = -(y0 - ny * (halfWidth * 0.8));
+            const b0Rx = x0 + nx * (halfWidth * 0.8), b0Rz = -(y0 + ny * (halfWidth * 0.8));
+            const b1Lx = x1 - nx * (halfWidth * 0.8), b1Lz = -(y1 - ny * (halfWidth * 0.8));
+            const b1Rx = x1 + nx * (halfWidth * 0.8), b1Rz = -(y1 + ny * (halfWidth * 0.8));
+
+            function addQuad(p0, p1, p2, p3, norm, color) {
+              positions.push(
+                p0[0], p0[1], p0[2],
+                p1[0], p1[1], p1[2],
+                p2[0], p2[1], p2[2],
+                p0[0], p0[1], p0[2],
+                p2[0], p2[1], p2[2],
+                p3[0], p3[1], p3[2],
+              );
+              for (let k = 0; k < 6; k++) {
+                normals.push(norm[0], norm[1], norm[2]);
+                colors.push(color.r, color.g, color.b);
+              }
+            }
+
+            // 1. Deck Top (OSM relation color across full 8m deck)
+            addQuad([t0Lx, deckY0, t0Lz], [t0Rx, deckY0, t0Rz], [t1Rx, deckY1, t1Rz], [t1Lx, deckY1, t1Lz], [0, 1, 0], cLine);
+            // 2. Underside (Dark concrete)
+            addQuad([b0Lx, underY0, b0Lz], [b1Lx, underY1, b1Lz], [b1Rx, underY1, b1Rz], [b0Rx, underY0, b0Rz], [0, -1, 0], cUnderside);
+            // 3. Left skirt (Dark sides)
+            addQuad([t0Lx, deckY0, t0Lz], [t1Lx, deckY1, t1Lz], [b1Lx, underY1, b1Lz], [b0Lx, underY0, b0Lz], [-nx, 0, ny], cDarkSides);
+            // 4. Right skirt (Dark sides)
+            addQuad([t0Rx, deckY0, t0Rz], [b0Rx, underY0, b0Rz], [b1Rx, underY1, b1Rz], [t1Rx, deckY1, t1Rz], [nx, 0, -ny], cDarkSides);
+          }
+        }
+
+        if (positions.length === 0) return null;
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+        geo.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+        geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+        const mat = new THREE.MeshStandardMaterial({
+          vertexColors: true,
+          roughness: 0.55,
+          metalness: 0.15,
+        });
+        mat.onBeforeCompile = shader => {
+          shader.uniforms.uNight = { value: nightLevel };
+          shader.vertexShader = shader.vertexShader.replace(
+            "#include <common>",
+            "#include <common>\nvarying vec3 vMetroNormal;\nvarying vec3 vMetroColor;",
+          ).replace(
+            "#include <color_vertex>",
+            "#include <color_vertex>\nvMetroNormal = normal;\nvMetroColor = color;",
+          );
+          shader.fragmentShader = shader.fragmentShader.replace(
+            "#include <common>",
+            "#include <common>\nuniform float uNight;\nvarying vec3 vMetroNormal;\nvarying vec3 vMetroColor;",
+          ).replace(
+            "#include <opaque_fragment>",
+            `#include <opaque_fragment>
+            if (vMetroNormal.y > 0.5) {
+              gl_FragColor.rgb += vMetroColor * (0.2 + 0.35 * uNight);
+            }`,
+          );
+          metroMaterials.push(shader);
+        };
+        return new THREE.Mesh(geo, mat);
+      }
+
+      function buildGradeTracksMesh(tracks, exaggeration) {
+        const positions = [];
+        const colors = [];
+        const normals = [];
+        const halfWidth = 2.4;
+
+        for (const track of tracks) {
+          const pts = track.points;
+          if (!pts || pts.length < 2) continue;
+          const cLine = new THREE.Color(track.color || "#00e5ff");
+
+          for (let i = 1; i < pts.length; i++) {
+            const [x0, y0, , g0] = pts[i - 1];
+            const [x1, y1, , g1] = pts[i];
+            const dx = x1 - x0;
+            const dy = y1 - y0;
+            const len = Math.hypot(dx, dy);
+            if (len < 0.05) continue;
+            const nx = -dy / len;
+            const ny = dx / len;
+            const y_elev0 = (g0 + 0.3) * exaggeration;
+            const y_elev1 = (g1 + 0.3) * exaggeration;
+
+            const t0Lx = x0 - nx * halfWidth, t0Lz = -(y0 - ny * halfWidth);
+            const t0Rx = x0 + nx * halfWidth, t0Rz = -(y0 + ny * halfWidth);
+            const t1Lx = x1 - nx * halfWidth, t1Lz = -(y1 - ny * halfWidth);
+            const t1Rx = x1 + nx * halfWidth, t1Rz = -(y1 + ny * halfWidth);
+
+            positions.push(
+              t0Lx, y_elev0, t0Lz,  t0Rx, y_elev0, t0Rz,  t1Rx, y_elev1, t1Rz,
+              t0Lx, y_elev0, t0Lz,  t1Rx, y_elev1, t1Rz,  t1Lx, y_elev1, t1Lz,
+            );
+            for (let k = 0; k < 6; k++) {
+              normals.push(0, 1, 0);
+              colors.push(cLine.r, cLine.g, cLine.b);
+            }
+          }
+        }
+        if (positions.length === 0) return null;
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+        geo.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+        geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+        return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.2 }));
+      }
+
+      function buildUndergroundGhostMesh(tracks, exaggeration) {
+        const positions = [];
+        const colors = [];
+        const halfWidth = 3.0;
+
+        for (const track of tracks) {
+          const pts = track.points;
+          if (!pts || pts.length < 2) continue;
+          const cLine = new THREE.Color(track.color || "#00e5ff");
+
+          for (let i = 1; i < pts.length; i++) {
+            const [x0, y0, , g0] = pts[i - 1];
+            const [x1, y1, , g1] = pts[i];
+            const dx = x1 - x0;
+            const dy = y1 - y0;
+            const len = Math.hypot(dx, dy);
+            if (len < 0.05) continue;
+            const nx = -dy / len;
+            const ny = dx / len;
+            // Ghost line slightly below surface or subsurface
+            const y_elev0 = (g0 - 6.0) * exaggeration;
+            const y_elev1 = (g1 - 6.0) * exaggeration;
+
+            const t0Lx = x0 - nx * halfWidth, t0Lz = -(y0 - ny * halfWidth);
+            const t0Rx = x0 + nx * halfWidth, t0Rz = -(y0 + ny * halfWidth);
+            const t1Lx = x1 - nx * halfWidth, t1Lz = -(y1 - ny * halfWidth);
+            const t1Rx = x1 + nx * halfWidth, t1Rz = -(y1 + ny * halfWidth);
+
+            positions.push(
+              t0Lx, y_elev0, t0Lz,  t0Rx, y_elev0, t0Rz,  t1Rx, y_elev1, t1Rz,
+              t0Lx, y_elev0, t0Lz,  t1Rx, y_elev1, t1Rz,  t1Lx, y_elev1, t1Lz,
+            );
+            for (let k = 0; k < 6; k++) {
+              colors.push(cLine.r, cLine.g, cLine.b);
+            }
+          }
+        }
+        if (positions.length === 0) return null;
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+        geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+        const mat = new THREE.MeshBasicMaterial({
+          vertexColors: true,
+          transparent: true,
+          opacity: 0.7,
+          depthTest: false,
+        });
+        const mesh = new THREE.Mesh(geo, mat);
+        mesh.renderOrder = 999;
+        return mesh;
+      }
+
+      function buildConstructionTracksMesh(tracks, viaductOffset, exaggeration) {
+        const linePositions = [];
+        const cAmber = new THREE.Color("#f59e0b");
+
+        for (const track of tracks) {
+          const pts = track.points;
+          if (!pts || pts.length < 2) continue;
+          for (let i = 1; i < pts.length; i++) {
+            const [x0, y0, , g0] = pts[i - 1];
+            const [x1, y1, , g1] = pts[i];
+            const offset = track.mode === "elevated" ? viaductOffset : 0.5;
+            const y0_elev = (g0 + offset) * exaggeration;
+            const y1_elev = (g1 + offset) * exaggeration;
+            linePositions.push(x0, y0_elev, -y0, x1, y1_elev, -y1);
+          }
+        }
+        if (linePositions.length === 0) return null;
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(linePositions, 3));
+        const mat = new THREE.LineDashedMaterial({
+          color: cAmber,
+          dashSize: 8,
+          gapSize: 6,
+          linewidth: 2,
+        });
+        const line = new THREE.LineSegments(geo, mat);
+        line.computeLineDistances();
+        return line;
+      }
+
+      function buildMetroVisuals(exaggeration) {
+        if (!metroData) return;
+        while (metroGroup.children.length > 0) {
+          const child = metroGroup.children[0];
+          metroGroup.remove(child);
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+            else child.material.dispose();
+          }
+        }
+        metroTrains.length = 0;
+
+        const showUnderground = !!document.querySelector("#metro-underground-toggle")?.checked;
+        const showConstruction = !!document.querySelector("#metro-construction-toggle")?.checked;
+        const tracks = metroData.tracks || [];
+        const viaductOffset = Number(metroData.metadata?.viaductHeightMeters) || 8.0;
+
+        // 1. Elevated Viaduct Guiderails (8m wide deck with line colors)
+        const elevatedOperational = tracks.filter(t => t.mode === "elevated" && !t.is_construction);
+        if (elevatedOperational.length > 0) {
+          const viaductMesh = buildViaductMesh(elevatedOperational, viaductOffset, exaggeration);
+          if (viaductMesh) metroGroup.add(viaductMesh);
+
+          // Thin concrete piers
+          const pierInstances = [];
+          for (const track of elevatedOperational) {
+            const pts = track.points;
+            if (!pts || pts.length < 2) continue;
+            let accDist = 0;
+            for (let i = 0; i < pts.length; i++) {
+              const [x, y, , groundZ] = pts[i];
+              const deckY = (groundZ + viaductOffset) * exaggeration;
+              const worldZ = -y;
+              if (i > 0) {
+                const [px, py] = pts[i - 1];
+                accDist += Math.hypot(x - px, y - py);
+              }
+              if (i === 0 || accDist >= 65) {
+                accDist = 0;
+                const groundY = groundZ * exaggeration;
+                const pierHeight = Math.max(1, deckY - groundY);
+                const pierY = groundY + pierHeight / 2;
+                pierInstances.push({ x, y: pierY, z: worldZ, height: pierHeight });
+              }
+            }
+          }
+
+          if (pierInstances.length > 0) {
+            const pierGeo = new THREE.CylinderGeometry(0.55, 0.75, 1, 8);
+            const pierMat = new THREE.MeshStandardMaterial({
+              color: "#94a3b8", roughness: 0.75, metalness: 0.1
+            });
+            const pierMesh = new THREE.InstancedMesh(pierGeo, pierMat, pierInstances.length);
+            const dummy = new THREE.Object3D();
+            for (let i = 0; i < pierInstances.length; i++) {
+              const p = pierInstances[i];
+              dummy.position.set(p.x, p.y, p.z);
+              dummy.scale.set(1, p.height, 1);
+              dummy.updateMatrix();
+              pierMesh.setMatrixAt(i, dummy.matrix);
+            }
+            pierMesh.instanceMatrix.needsUpdate = true;
+            metroGroup.add(pierMesh);
+          }
+        }
+
+        // 2. At-Grade Tracks
+        const gradeOperational = tracks.filter(t => t.mode === "at_grade" && !t.is_construction);
+        if (gradeOperational.length > 0) {
+          const gradeMesh = buildGradeTracksMesh(gradeOperational, exaggeration);
+          if (gradeMesh) metroGroup.add(gradeMesh);
+        }
+
+        // 3. Underground Ghost Lines (behind showUnderground toggle)
+        const undergroundOperational = tracks.filter(t => t.mode === "underground" && !t.is_construction);
+        if (showUnderground && undergroundOperational.length > 0) {
+          const undergroundMesh = buildUndergroundGhostMesh(undergroundOperational, exaggeration);
+          if (undergroundMesh) metroGroup.add(undergroundMesh);
+        }
+
+        // 4. Under Construction Tracks (dashed, behind showConstruction toggle)
+        const constructionTracks = tracks.filter(t => t.is_construction);
+        if (showConstruction && constructionTracks.length > 0) {
+          const constructionMesh = buildConstructionTracksMesh(constructionTracks, viaductOffset, exaggeration);
+          if (constructionMesh) metroGroup.add(constructionMesh);
+        }
+
+        // 5. Metro Stations
+        const stations = (metroStationsData || []).filter(s => {
+          if (s.is_construction && !showConstruction) return false;
+          return true;
+        });
+
+        if (stations.length > 0) {
+          const elevatedStations = stations.filter(s => s.mode === "elevated");
+          const undergroundStations = stations.filter(s => s.mode === "underground");
+          const gradeStations = stations.filter(s => s.mode === "at_grade");
+
+          const stationGeo = new THREE.CylinderGeometry(14, 14, 3.5, 16);
+          const beaconGeo = new THREE.CylinderGeometry(1.2, 2.5, 45, 8);
+
+          // Render station instances grouped by line color
+          const stationsByColor = new Map();
+          for (const s of stations) {
+            const c = s.color || "#00e5ff";
+            if (!stationsByColor.has(c)) stationsByColor.set(c, []);
+            stationsByColor.get(c).push(s);
+          }
+
+          for (const [colorHex, group] of stationsByColor.entries()) {
+            const stationMat = new THREE.MeshStandardMaterial({
+              color: colorHex, roughness: 0.3, emissive: colorHex, emissiveIntensity: 0.5
+            });
+            const beaconMat = new THREE.MeshBasicMaterial({
+              color: colorHex, transparent: true, opacity: 0.55
+            });
+
+            const stnMesh = new THREE.InstancedMesh(stationGeo, stationMat, group.length);
+            const bcnMesh = new THREE.InstancedMesh(beaconGeo, beaconMat, group.length);
+            const dummy = new THREE.Object3D();
+
+            for (let i = 0; i < group.length; i++) {
+              const s = group[i];
+              let platformY;
+              if (s.mode === "elevated") {
+                platformY = (s.ground_z + viaductOffset) * exaggeration;
+              } else if (s.mode === "underground") {
+                platformY = showUnderground ? (s.ground_z - 10) * exaggeration : (s.ground_z + 1.2) * exaggeration;
+              } else {
+                platformY = (s.ground_z + 0.5) * exaggeration;
+              }
+
+              dummy.position.set(s.x, platformY, -s.y);
+              dummy.scale.set(1, 1, 1);
+              dummy.updateMatrix();
+              stnMesh.setMatrixAt(i, dummy.matrix);
+
+              dummy.position.set(s.x, platformY + 22, -s.y);
+              dummy.updateMatrix();
+              bcnMesh.setMatrixAt(i, dummy.matrix);
+            }
+            stnMesh.instanceMatrix.needsUpdate = true;
+            bcnMesh.instanceMatrix.needsUpdate = true;
+            metroGroup.add(stnMesh);
+            metroGroup.add(bcnMesh);
+          }
+        }
+
+        // 6. Animated Trains (on operational tracks only, never on construction)
+        const trainTracks = [...elevatedOperational, ...gradeOperational];
+        if (showUnderground) trainTracks.push(...undergroundOperational);
+
+        const longTracks = trainTracks.filter(t => t.length_m >= 1200);
+        const trainCount = Math.min(18, longTracks.length * 2);
+
+        for (let i = 0; i < trainCount; i++) {
+          const track = longTracks[i % longTracks.length];
+          const trainGroup = new THREE.Group();
+          const trackColor = track.color || "#00e5ff";
+
+          const trainMaterial = new THREE.MeshStandardMaterial({
+            color: "#e2e8f0", roughness: 0.3, metalness: 0.7
+          });
+          const stripeMaterial = new THREE.MeshBasicMaterial({ color: trackColor });
+          const headlightMaterial = new THREE.MeshBasicMaterial({ color: "#fef08a" });
+
+          for (let carIdx = 0; carIdx < 3; carIdx++) {
+            const car = new THREE.Mesh(new THREE.BoxGeometry(2.8, 3.0, 12), trainMaterial);
+            car.position.z = (carIdx - 1) * 13.5;
+            const stripe = new THREE.Mesh(new THREE.BoxGeometry(2.86, 0.5, 11.8), stripeMaterial);
+            car.add(stripe);
+            trainGroup.add(car);
+          }
+          const lightL = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), headlightMaterial);
+          lightL.position.set(-0.8, 0, 7.1);
+          const lightR = new THREE.Mesh(new THREE.SphereGeometry(0.35, 8, 8), headlightMaterial);
+          lightR.position.set(0.8, 0, 7.1);
+          trainGroup.add(lightL, lightR);
+
+          metroGroup.add(trainGroup);
+          // Realistic speed: average 35 km/h = ~9.7 m/s
+          const speed = 9.7 + ((i % 5) - 2) * 0.5;
+          metroTrains.push({
+            group: trainGroup,
+            track,
+            distance: (i * 1200) % track.length_m,
+            speed: speed,
+            forward: i % 2 === 0 ? 1 : -1,
+          });
+        }
+      }
+
+      function getTrackPointAtDistance(track, distance, exaggeration) {
+        const pts = track.points;
+        const offset = track.mode === "elevated" ? 8.0 : (track.mode === "underground" ? -10.0 : 0.4);
+        let d = 0;
+        for (let i = 1; i < pts.length; i++) {
+          const [x0, y0, , g0] = pts[i - 1];
+          const [x1, y1, , g1] = pts[i];
+          const segLen = Math.hypot(x1 - x0, y1 - y0);
+          if (d + segLen >= distance || i === pts.length - 1) {
+            const t = segLen > 0 ? Math.max(0, Math.min(1, (distance - d) / segLen)) : 0;
+            const x = x0 + (x1 - x0) * t;
+            const y = y0 + (y1 - y0) * t;
+            const g = g0 + (g1 - g0) * t;
+            const trackY = (g + offset) * exaggeration + 2.0;
+            return new THREE.Vector3(x, trackY, -y);
+          }
+          d += segLen;
+        }
+        const last = pts[pts.length - 1];
+        const offsetLast = track.mode === "elevated" ? 8.0 : (track.mode === "underground" ? -10.0 : 0.4);
+        return new THREE.Vector3(last[0], (last[3] + offsetLast) * exaggeration + 2.0, -last[1]);
+      }
+
+      function updateMetroTrains(dt) {
+        if (!metroGroup.visible || !metroTrains.length) return;
+        for (const train of metroTrains) {
+          const totalLen = train.track.length_m;
+          train.distance += train.speed * dt * train.forward;
+          if (train.distance >= totalLen) {
+            train.distance = totalLen;
+            train.forward = -1;
+          } else if (train.distance <= 0) {
+            train.distance = 0;
+            train.forward = 1;
+          }
+          const currentPos = getTrackPointAtDistance(train.track, train.distance, verticalExaggeration);
+          const lookAheadDist = train.forward > 0
+            ? Math.min(totalLen, train.distance + 4)
+            : Math.max(0, train.distance - 4);
+          const targetPos = getTrackPointAtDistance(train.track, lookAheadDist, verticalExaggeration);
+          train.group.position.copy(currentPos);
+          if (currentPos.distanceToSquared(targetPos) > 0.001) {
+            train.group.lookAt(targetPos);
+          }
+        }
+      }
+
+      // Station Hover Tooltip
+      const metroTooltip = document.querySelector("#metro-tooltip");
+      const metroTooltipName = document.querySelector("#metro-tooltip-name");
+      const metroTooltipType = document.querySelector("#metro-tooltip-type");
+      const tempStationScreenPos = new THREE.Vector3();
+
+      window.addEventListener("pointermove", event => {
+        if (!metroGroup.visible || !metroStationsData || !metroStationsData.length) {
+          if (metroTooltip) metroTooltip.style.display = "none";
+          return;
+        }
+        const showUnderground = !!document.querySelector("#metro-underground-toggle")?.checked;
+        const showConstruction = !!document.querySelector("#metro-construction-toggle")?.checked;
+        const clientX = event.clientX;
+        const clientY = event.clientY;
+        const viaductOffset = 8.0;
+        let hoveredStation = null;
+        let minScreenDist = 20;
+
+        for (let i = 0; i < metroStationsData.length; i++) {
+          const s = metroStationsData[i];
+          if (!s.name) continue;
+          if (s.is_construction && !showConstruction) continue;
+
+          let platformY;
+          if (s.mode === "elevated") {
+            platformY = (s.ground_z + viaductOffset) * verticalExaggeration;
+          } else if (s.mode === "underground") {
+            platformY = showUnderground ? (s.ground_z - 10) * verticalExaggeration : (s.ground_z + 1.2) * verticalExaggeration;
+          } else {
+            platformY = (s.ground_z + 0.5) * verticalExaggeration;
+          }
+
+          tempStationScreenPos.set(s.x, platformY, -s.y);
+          tempStationScreenPos.project(camera);
+          if (tempStationScreenPos.z > 1) continue;
+
+          const sx = (tempStationScreenPos.x * 0.5 + 0.5) * window.innerWidth;
+          const sy = (-(tempStationScreenPos.y * 0.5) + 0.5) * window.innerHeight;
+          const dist = Math.hypot(clientX - sx, clientY - sy);
+          if (dist < minScreenDist) {
+            minScreenDist = dist;
+            hoveredStation = s;
+          }
+        }
+
+        if (hoveredStation) {
+          metroTooltip.style.display = "block";
+          metroTooltip.style.left = `${clientX}px`;
+          metroTooltip.style.top = `${clientY}px`;
+          metroTooltipName.textContent = hoveredStation.name;
+          const modeStr = hoveredStation.mode ? (hoveredStation.mode.charAt(0).toUpperCase() + hoveredStation.mode.slice(1)) : "Elevated";
+          metroTooltipType.textContent = `${hoveredStation.line || "Metro"} Line · ${modeStr}${hoveredStation.is_construction ? " (Under Construction)" : ""}`;
+        } else {
+          metroTooltip.style.display = "none";
+        }
+      });
+
+      // Building Click Inspection
+      const SOURCE_LABEL_MAP = {
+        0: "tagged",
+        1: "floors",
+        2: "guessed",
+        3: "raster estimate",
+        4: "verified landmark",
+        5: "rejected tag",
+        6: "corroborated by floors",
+      };
+
+      let buildingNamesData = {};
+      let loadedLandmarksList = [];
+      let ghslGridData = null;
+      let rejectedTagsData = null;
+      let heightInputsData = null;
+      window.buildingNamesData = buildingNamesData;
+      window.loadedLandmarksList = loadedLandmarksList;
+      window.ghslGridData = ghslGridData;
+      window.rejectedTagsData = rejectedTagsData;
+      window.heightInputsData = heightInputsData;
+
+      function sampleGhslRaster(lon, lat) {
+        if (!ghslGridData) return null;
+        const [minLon, minLat, maxLon, maxLat] = ghslGridData.bounds;
+        if (lon < minLon || lon > maxLon || lat < minLat || lat > maxLat) return null;
+        const col = Math.floor(((lon - minLon) / (maxLon - minLon)) * ghslGridData.width);
+        const row = Math.floor(((maxLat - lat) / (maxLat - minLat)) * ghslGridData.height);
+        if (col < 0 || col >= ghslGridData.width || row < 0 || row >= ghslGridData.height) return null;
+        const valDm = ghslGridData.grid_dm[row * ghslGridData.width + col];
+        if (valDm === undefined || valDm < 0) return null;
+        return valDm / 10.0;
+      }
+      window.sampleGhslRaster = sampleGhslRaster;
+
+      function polygonCentroid(coordinates) {
+        let twiceArea = 0;
+        let xSum = 0;
+        let northSum = 0;
+        for (let index = 0; index < coordinates.length; index += 2) {
+          const x1 = coordinates[index];
+          const north1 = coordinates[index + 1];
+          const nextIndex = (index + 2) % coordinates.length;
+          const x2 = coordinates[nextIndex];
+          const north2 = coordinates[nextIndex + 1];
+          const factor = x1 * north2 - x2 * north1;
+          twiceArea += factor;
+          xSum += (x1 + x2) * factor;
+          northSum += (north1 + north2) * factor;
+        }
+        if (Math.abs(twiceArea) < 1e-8) {
+          let x = 0, north = 0;
+          for (let index = 0; index < coordinates.length; index += 2) {
+            x += coordinates[index];
+            north += coordinates[index + 1];
+          }
+          const count = coordinates.length / 2;
+          return [x / count, north / count];
+        }
+        return [xSum / (3 * twiceArea), northSum / (3 * twiceArea)];
+      }
+      window.polygonCentroid = polygonCentroid;
+
+      function polygonArea(coords) {
+        let area = 0;
+        for (let i = 0; i < coords.length; i += 2) {
+          const x1 = coords[i], y1 = coords[i + 1];
+          const j = (i + 2) % coords.length;
+          const x2 = coords[j], y2 = coords[j + 1];
+          area += x1 * y2 - x2 * y1;
+        }
+        return Math.abs(area) / 2;
+      }
+
+      function pointInPolygon(px, py, coords) {
+        let inside = false;
+        for (let i = 0, j = coords.length - 2; i < coords.length; j = i, i += 2) {
+          const xi = coords[i], yi = coords[i + 1];
+          const xj = coords[j], yj = coords[j + 1];
+          const intersect = ((yi > py) !== (yj > py)) && (px < (xj - xi) * (py - yi) / (yj - yi) + xi);
+          if (intersect) inside = !inside;
+        }
+        return inside;
+      }
+
+      function pickBuildingAtRay(raycaster) {
+        let bestBuilding = null;
+        let bestDist = Infinity;
+        const tempVec = new THREE.Vector3();
+        const box = new THREE.Box3();
+        const sphere = new THREE.Sphere();
+
+        for (const [key, state] of loadedChunks) {
+          if (!state.buildingBounds || state.buildingBounds.length === 0 || !state.buildingText) continue;
+          if (!state.parsedBuildings) {
+            try {
+              state.parsedBuildings = JSON.parse(state.buildingText);
+            } catch (e) {
+              continue;
+            }
+          }
+          const buildings = state.parsedBuildings;
+          const bounds = state.buildingBounds;
+
+          for (let i = 0; i < buildings.length; i++) {
+            const bi = i * 4;
+            const cx = bounds[bi];
+            const cy = bounds[bi + 1];
+            const cz = bounds[bi + 2];
+            const rad = bounds[bi + 3];
+
+            sphere.center.set(cx, cy, cz);
+            sphere.radius = rad;
+            if (!raycaster.ray.intersectsSphere(sphere)) continue;
+
+            const b = buildings[i];
+            const height = b[0];
+            const coords = b[1];
+            const source = b[2];
+
+            let minX = Infinity, maxX = -Infinity, minN = Infinity, maxN = -Infinity;
+            for (let c = 0; c < coords.length; c += 2) {
+              minX = Math.min(minX, coords[c]);
+              maxX = Math.max(maxX, coords[c]);
+              minN = Math.min(minN, coords[c + 1]);
+              maxN = Math.max(maxN, coords[c + 1]);
+            }
+            const bHeight = Math.max(3, height) * verticalExaggeration;
+            const baseY = cy - bHeight / 2;
+            const topY = cy + bHeight / 2;
+            box.min.set(minX, baseY, -maxN);
+            box.max.set(maxX, topY, -minN);
+
+            const hitPt = raycaster.ray.intersectBox(box, tempVec);
+            if (hitPt) {
+              const dist = raycaster.ray.origin.distanceTo(hitPt);
+              if (dist < bestDist) {
+                bestDist = dist;
+                bestBuilding = {
+                  chunkKey: key,
+                  index: i,
+                  height,
+                  coords,
+                  source,
+                  baseY,
+                  topY,
+                };
+              }
+            }
+          }
+        }
+
+        if (!bestBuilding) {
+          const terrainHits = raycaster.intersectObjects(terrainGroup.children, false);
+          if (terrainHits.length > 0) {
+            const gh = terrainHits[0].point;
+            const gx = gh.x;
+            const gn = -gh.z;
+            const gix = Math.floor(gx / CHUNK_SIZE);
+            const giy = Math.floor(gn / CHUNK_SIZE);
+            const key = `${gix},${giy}`;
+            const state = loadedChunks.get(key);
+            if (state && state.buildingText) {
+              if (!state.parsedBuildings) {
+                try { state.parsedBuildings = JSON.parse(state.buildingText); } catch (e) {}
+              }
+              const buildings = state.parsedBuildings || [];
+              for (let i = 0; i < buildings.length; i++) {
+                const b = buildings[i];
+                if (pointInPolygon(gx, gn, b[1])) {
+                  const height = b[0];
+                  const source = b[2];
+                  const cy = state.buildingBounds[i * 4 + 1];
+                  const bHeight = Math.max(3, height) * verticalExaggeration;
+                  bestBuilding = {
+                    chunkKey: key,
+                    index: i,
+                    height,
+                    coords: b[1],
+                    source,
+                    baseY: cy - bHeight / 2,
+                    topY: cy + bHeight / 2,
+                  };
+                  break;
+                }
+              }
+            }
+          }
+        }
+        return bestBuilding;
+      }
+
+      function highlightBuilding(building) {
+        while (selectionGroup.children.length > 0) {
+          const c = selectionGroup.children[0];
+          selectionGroup.remove(c);
+          if (c.geometry) c.geometry.dispose();
+          if (c.material) c.material.dispose();
+        }
+        if (!building) return;
+
+        const coords = building.coords;
+        const baseY = building.baseY;
+        const topY = building.topY;
+
+        const points = [];
+        for (let i = 0; i < coords.length; i += 2) {
+          const x = coords[i], z = -coords[i + 1];
+          const nextI = (i + 2) % coords.length;
+          const nx = coords[nextI], nz = -coords[nextI + 1];
+          // Bottom outline
+          points.push(x, baseY + 0.2, z, nx, baseY + 0.2, nz);
+          // Top outline
+          points.push(x, topY, z, nx, topY, nz);
+          // Vertical pillar
+          points.push(x, baseY + 0.2, z, x, topY, z);
+        }
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(points, 3));
+        const mat = new THREE.LineBasicMaterial({
+          color: "#00f0ff",
+          depthTest: false,
+          transparent: true,
+          opacity: 0.95,
+        });
+        const lines = new THREE.LineSegments(geo, mat);
+        lines.renderOrder = 999;
+        selectionGroup.add(lines);
+      }
+
+      function inspectBuilding(building) {
+        const panel = document.querySelector("#inspect-panel");
+        if (!building) {
+          panel.style.display = "none";
+          highlightBuilding(null);
+          return;
+        }
+        highlightBuilding(building);
+
+        const coords = building.coords;
+        const [cx, cNorth] = polygonCentroid(coords);
+        const lon = ORIGIN_LON + cx / METERS_PER_DEGREE_LON;
+        const lat = ORIGIN_LAT + cNorth / METERS_PER_DEGREE_LAT;
+        const area = polygonArea(coords);
+
+        let name = buildingNamesData[building.chunkKey]?.[String(building.index)];
+        let matchedLandmark = null;
+        for (const l of loadedLandmarksList) {
+          const dist = Math.hypot(
+            (l.lon - lon) * METERS_PER_DEGREE_LON,
+            (l.lat - lat) * METERS_PER_DEGREE_LAT
+          );
+          if (dist <= 60) {
+            matchedLandmark = l;
+            if (!name) name = l.name;
+            break;
+          }
+        }
+
+        const heightVal = building.height;
+        const sourceWord = SOURCE_LABEL_MAP[building.source] || "raster estimate";
+
+        document.querySelector("#inspect-name").textContent = name || "Unnamed Building";
+        document.querySelector("#inspect-height").textContent = `${heightVal.toFixed(1)} m`;
+        document.querySelector("#inspect-source").textContent = sourceWord;
+        document.querySelector("#inspect-area").textContent = `${Math.round(area).toLocaleString()} m²`;
+        document.querySelector("#inspect-coords").textContent = `${lat.toFixed(5)}° N, ${lon.toFixed(5)}° E`;
+
+        // GHSL raster value
+        const rasterVal = sampleGhslRaster(lon, lat);
+        const rasterElem = document.querySelector("#inspect-raster-val");
+        if (rasterElem) {
+          rasterElem.textContent = rasterVal !== null ? `${rasterVal.toFixed(1)} m` : "—";
+        }
+
+        // Height inputs: tag and floors*3.2
+        const inputKey = `${building.chunkKey}_${building.index}`;
+        const inputRec = heightInputsData ? heightInputsData[inputKey] : null;
+        const taggedH = inputRec?.tag ?? (building.source === 0 ? building.height : null);
+        const floorCount = inputRec?.floors ?? (building.source === 1 ? building.height / 3.2 : null);
+        const floorsH = floorCount !== null ? floorCount * 3.2 : null;
+
+        const tagElem = document.querySelector("#inspect-tag-val");
+        if (tagElem) {
+          tagElem.textContent = taggedH !== null ? `${taggedH.toFixed(1)} m` : "—";
+        }
+        const floorsElem = document.querySelector("#inspect-floors-val");
+        if (floorsElem) {
+          floorsElem.textContent = floorsH !== null ? `${floorsH.toFixed(1)} m` : "—";
+        }
+
+        // Uncertain Height badge vs Corroborated badge
+        const isCorroborated = building.source === 6;
+        const isUncertain = !isCorroborated && building.source !== 4 && (building.source === 5 || ((taggedH !== null && taggedH >= 100) || (floorsH !== null && floorsH >= 100) || (heightVal >= 100 && building.source === 1))) && (rasterVal !== null && rasterVal < 40);
+        
+        const uncertainBadge = document.querySelector("#inspect-uncertain-badge");
+        if (uncertainBadge) {
+          uncertainBadge.style.display = isUncertain ? "inline-block" : "none";
+        }
+        const corroboratedBadge = document.querySelector("#inspect-corroborated-badge");
+        if (corroboratedBadge) {
+          corroboratedBadge.style.display = isCorroborated ? "inline-block" : "none";
+        }
+
+        // Display rejected tag details if applicable
+        const tagNotice = document.querySelector("#inspect-tag-notice");
+        const tagReason = document.querySelector("#inspect-tag-reason");
+        const latKey = lat.toFixed(5);
+        const lonKey = lon.toFixed(5);
+        let rejectedInfo = null;
+        if (rejectedTagsData && building.source === 5) {
+          rejectedInfo = rejectedTagsData[`${latKey}_${lonKey}`];
+          if (!rejectedInfo) {
+            for (const key in rejectedTagsData) {
+              const r = rejectedTagsData[key];
+              if (Math.hypot(r.lat - lat, r.lon - lon) < 0.0003) {
+                rejectedInfo = r;
+                break;
+              }
+            }
+          }
+        }
+
+        if (tagNotice && tagReason) {
+          if (building.source === 5 && rejectedInfo) {
+            tagNotice.style.display = "block";
+            const origTag = rejectedInfo?.tagged_height ? `${rejectedInfo.tagged_height.toFixed(1)} m` : (taggedH ? `${taggedH.toFixed(1)} m` : "≥80 m");
+            const reason = rejectedInfo?.reason || "tagged height failed plausibility check vs GHSL neighbourhood raster";
+            tagReason.textContent = `Tagged ${origTag} was rejected: ${reason}`;
+          } else {
+            tagNotice.style.display = "none";
+          }
+        }
+
+        const badge = document.querySelector("#inspect-badge");
+        if (matchedLandmark) {
+          badge.textContent = matchedLandmark.category || "Landmark";
+          badge.style.color = "#34d399";
+        } else if (heightVal >= 50) {
+          badge.textContent = "High-rise Tower";
+          badge.style.color = "#38bdf8";
+        } else {
+          badge.textContent = "Building Footprint";
+          badge.style.color = "#94a3b8";
+        }
+
+        const linkRow = document.querySelector("#inspect-landmark-link");
+        const linkAnchor = document.querySelector("#inspect-link-anchor");
+        if (matchedLandmark && (matchedLandmark.source_url || matchedLandmark.coordinate_source_url)) {
+          linkRow.style.display = "block";
+          linkAnchor.href = matchedLandmark.source_url || matchedLandmark.coordinate_source_url;
+          linkAnchor.querySelector("span").textContent = matchedLandmark.verified ? "Verified Source (Wikipedia)" : "OSM Feature Source";
+        } else {
+          linkRow.style.display = "none";
+        }
+
+        panel.style.display = "block";
+      }
+      window.inspectBuilding = inspectBuilding;
+
+      let pointerDownPos = null;
+      renderer.domElement.addEventListener("pointerdown", event => {
+        pointerDownPos = { x: event.clientX, y: event.clientY, time: performance.now() };
+      });
+
+      renderer.domElement.addEventListener("pointerup", event => {
+        if (!pointerDownPos) return;
+        const dx = event.clientX - pointerDownPos.x;
+        const dy = event.clientY - pointerDownPos.y;
+        const dt = performance.now() - pointerDownPos.time;
+        pointerDownPos = null;
+        if (Math.hypot(dx, dy) <= 6 && dt <= 500) {
+          const mouse = new THREE.Vector2(
+            (event.clientX / window.innerWidth) * 2 - 1,
+            -(event.clientY / window.innerHeight) * 2 + 1
+          );
+          const clickRay = new THREE.Raycaster();
+          clickRay.setFromCamera(mouse, camera);
+          const hit = pickBuildingAtRay(clickRay);
+          inspectBuilding(hit);
+        }
+      });
+
+      const inspectCloseBtn = document.querySelector("#inspect-close");
+      if (inspectCloseBtn) {
+        inspectCloseBtn.addEventListener("click", () => {
+          inspectBuilding(null);
+        });
+      }
+
+      // URL Hash Serialization & Restoration
+      let hasRestoredViewFromHash = false;
+
+      function serializeStateToHash() {
+        const p = new URLSearchParams();
+        p.set("cam", `${camera.position.x.toFixed(1)},${camera.position.y.toFixed(1)},${camera.position.z.toFixed(1)}`);
+        p.set("target", `${controls.target.x.toFixed(1)},${controls.target.y.toFixed(1)},${controls.target.z.toFixed(1)}`);
+        p.set("time", timeSlider.value);
+        p.set("exagg", verticalExaggeration.toFixed(1));
+        p.set("radius", radiusSlider.value);
+        p.set("metro", metroToggle.checked ? "1" : "0");
+        p.set("source", heightSourceToggle.checked ? "1" : "0");
+        return p.toString();
+      }
+
+      let hashDebounce;
+      function scheduleHashUpdate() {
+        clearTimeout(hashDebounce);
+        hashDebounce = setTimeout(() => {
+          history.replaceState(null, "", `#${serializeStateToHash()}`);
+        }, 250);
+      }
+
+      function restoreStateFromHash() {
+        if (!location.hash || location.hash.length < 2) return false;
+        const p = new URLSearchParams(location.hash.slice(1));
+        let restored = false;
+        if (p.has("time")) {
+          const t = Number(p.get("time"));
+          if (Number.isFinite(t)) {
+            timeSlider.value = String(t);
+            setTime(t);
+            restored = true;
+          }
+        }
+        if (p.has("exagg")) {
+          const ex = Number(p.get("exagg"));
+          if (Number.isFinite(ex) && ex >= 1 && ex <= 3) {
+            verticalExaggeration = ex;
+            verticalExaggerationSlider.value = String(ex);
+            verticalExaggerationLabel.textContent = `${ex.toFixed(1)}x`;
+            restored = true;
+          }
+        }
+        if (p.has("radius")) {
+          const r = Number(p.get("radius"));
+          if ([2, 4, 6].includes(r)) {
+            radiusSlider.value = String(r);
+            loadedRadius = r * 1000;
+            restored = true;
+          }
+        }
+        if (p.has("metro")) {
+          const m = p.get("metro") === "1";
+          metroToggle.checked = m;
+          metroGroup.visible = m;
+        }
+        if (p.has("source")) {
+          const s = p.get("source") === "1";
+          heightSourceToggle.checked = s;
+          setHeightSourceDebug(s);
+        }
+        if (p.has("cam") && p.has("target")) {
+          const camPts = p.get("cam").split(",").map(Number);
+          const tarPts = p.get("target").split(",").map(Number);
+          if (camPts.length === 3 && tarPts.length === 3 && camPts.every(Number.isFinite) && tarPts.every(Number.isFinite)) {
+            camera.position.set(camPts[0], camPts[1], camPts[2]);
+            controls.target.set(tarPts[0], tarPts[1], tarPts[2]);
+            controls.update();
+            hasRestoredViewFromHash = true;
+            restored = true;
+          }
+        }
+        return restored;
+      }
+
+      async function loadMetro() {
+        const [metroRes, stationsRes] = await Promise.all([
+          fetch(`data/metro.json?v=${APP_VERSION}`, { cache: "no-cache" }),
+          fetch(`data/metro_stations.json?v=${APP_VERSION}`, { cache: "no-cache" }),
+        ]);
+        if (!metroRes.ok) return;
+        metroData = await metroRes.json();
+        metroStationsData = stationsRes.ok ? await stationsRes.json() : [];
+        window.metroStationsData = metroStationsData;
+        buildMetroVisuals(verticalExaggeration);
+      }
+
+      // Metro Sub-toggles
+      const metroUndergroundToggle = document.querySelector("#metro-underground-toggle");
+      const metroConstructionToggle = document.querySelector("#metro-construction-toggle");
+
+      if (metroUndergroundToggle) {
+        metroUndergroundToggle.addEventListener("change", () => {
+          buildMetroVisuals(verticalExaggeration);
+        });
+      }
+      if (metroConstructionToggle) {
+        metroConstructionToggle.addEventListener("change", () => {
+          buildMetroVisuals(verticalExaggeration);
+        });
+      }
+
+      // About & Data Sources Modal Listeners
+      const aboutOpenBtn = document.querySelector("#about-open-btn");
+      const aboutCloseBtn = document.querySelector("#about-close");
+      const aboutModal = document.querySelector("#about-modal");
+
+      if (aboutOpenBtn && aboutModal) {
+        aboutOpenBtn.addEventListener("click", () => {
+          aboutModal.style.display = "flex";
+        });
+      }
+      if (aboutCloseBtn && aboutModal) {
+        aboutCloseBtn.addEventListener("click", () => {
+          aboutModal.style.display = "none";
+        });
+      }
+      if (aboutModal) {
+        aboutModal.addEventListener("click", e => {
+          if (e.target === aboutModal) aboutModal.style.display = "none";
+        });
+      }
+
+      // Initial Data Loading & Restore
+      restoreStateFromHash();
+      setTime(timeSlider.value);
+
+      fetchJSON("building_names.json").then(data => {
+        if (data) {
+          buildingNamesData = data;
+          window.buildingNamesData = data;
+        }
+      }).catch(e => console.warn("Could not load building names:", e));
+
+      fetchJSON("ghsl_grid.json").then(data => {
+        if (data) {
+          ghslGridData = data;
+          window.ghslGridData = data;
+        }
+      }).catch(e => console.warn("Could not load GHSL raster grid:", e));
+
+      fetchJSON("rejected_tags.json").then(data => {
+        if (data) {
+          rejectedTagsData = data;
+          window.rejectedTagsData = data;
+        }
+      }).catch(e => console.warn("Could not load rejected tags lookup:", e));
+
+      fetchJSON("building_height_inputs.json").then(data => {
+        if (data) {
+          heightInputsData = data;
+          window.heightInputsData = data;
+        }
+      }).catch(e => console.warn("Could not load height inputs lookup:", e));
+
+      loadCity().catch(error => {
+        statusElement.textContent = error.message || "Could not load city data.";
+        statusElement.classList.add("error");
+        datasetElement.textContent = "Unavailable";
+        console.error(error);
+      });
+      loadLandmarks().catch(error => {
+        landmarkStatusElement.textContent = error.message || "Could not load landmarks.";
+        landmarkStatusElement.classList.add("error");
+        console.error(error);
+      });
+      loadMetro().catch(error => {
+        console.error("Could not load metro:", error);
+      });
+
+      window.addEventListener("resize", () => {
+        camera.aspect = innerWidth / innerHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(innerWidth, innerHeight);
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+      });
+
+      let lastAnimationTime = performance.now();
+      renderer.setAnimationLoop(() => {
+        const now = performance.now();
+        const dt = Math.min(0.1, (now - lastAnimationTime) / 1000);
+        lastAnimationTime = now;
+
+        controls.update();
+        updateMetroTrains(dt);
+        renderer.render(scene, camera);
+        fpsFrames++;
+        if (now - fpsStart >= 1000) {
+          fpsElement.textContent = `${Math.round(fpsFrames * 1000 / (now - fpsStart))} FPS`;
+          fpsFrames = 0;
+          fpsStart = now;
+        }
+        if (now - lastHudUpdate > 350) {
+          lastHudUpdate = now;
+          updateHud();
+          refreshChunkSet();
+        }
+      });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,287 @@
+#!/usr/bin/env python3
+"""Build and update landmarks.json with required categories and verified sources."""
+
+import json
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+DATA_PATH = ROOT / "data" / "landmarks.json"
+WEB_PATH = ROOT / "web" / "data" / "landmarks.json"
+
+landmarks = [
+  # CIVIC
+  {
+    "name": "Vidhana Soudha",
+    "category": "civic",
+    "lat": 12.9796,
+    "lon": 77.5906,
+    "height_m": 46,
+    "source_url": "https://en.wikipedia.org/wiki/Vidhana_Soudha",
+    "verified": True,
+    "coordinate_source_url": "https://en.wikipedia.org/wiki/Vidhana_Soudha",
+    "note": "Wikipedia lists 46 m (150 ft) and coordinates 12.9796, 77.5906."
+  },
+  {
+    "name": "Karnataka High Court (Attara Kacheri)",
+    "category": "civic",
+    "lat": 12.9778852,
+    "lon": 77.5926731,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "https://www.openstreetmap.org/relation/446900",
+    "note": "Location from OpenStreetMap; no verified height recorded."
+  },
+
+  # HERITAGE
+  {
+    "name": "Bangalore Palace",
+    "category": "heritage",
+    "lat": 12.9985954,
+    "lon": 77.5920086,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "https://www.openstreetmap.org/way/143384387",
+    "note": "Location from OpenStreetMap; no verified height recorded."
+  },
+  {
+    "name": "Lalbagh Glass House",
+    "category": "heritage",
+    "lat": 12.949657,
+    "lon": 77.586739,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "Overture Places (Lalbagh Botanical Garden Glass House)",
+    "note": "Location from Overture Places release 2026-10-21.0; no verified height recorded."
+  },
+  {
+    "name": "Tipu Sultan's Summer Palace",
+    "category": "heritage",
+    "lat": 12.9593,
+    "lon": 77.5738,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "https://en.wikipedia.org/wiki/Tipu_Sultan%27s_Summer_Palace",
+    "note": "Coordinates from Wikipedia; no verified architectural height recorded."
+  },
+
+  # STADIUM
+  {
+    "name": "M. Chinnaswamy Stadium",
+    "category": "stadium",
+    "lat": 12.9788127,
+    "lon": 77.5995775,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "https://www.openstreetmap.org/way/28126916",
+    "note": "Location from OpenStreetMap; no verified height recorded."
+  },
+  {
+    "name": "Sree Kanteerava Stadium",
+    "category": "stadium",
+    "lat": 12.9698,
+    "lon": 77.5928,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "https://en.wikipedia.org/wiki/Sree_Kanteerava_Stadium",
+    "note": "Coordinates from Wikipedia; no verified height recorded."
+  },
+
+  # MALL
+  {
+    "name": "UB City (UB Tower)",
+    "category": "mall",
+    "lat": 12.97175,
+    "lon": 77.5958333,
+    "height_m": 123,
+    "source_url": "https://www.skyscrapercenter.com/building/ub-tower/13883",
+    "verified": True,
+    "coordinate_source_url": "https://en.wikipedia.org/wiki/UB_City",
+    "note": "123 m is the architectural height of UB Tower; coordinates from UB City Wikipedia page."
+  },
+  {
+    "name": "Mantri Square Mall",
+    "category": "mall",
+    "lat": 12.9915291,
+    "lon": 77.5707558,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "https://www.openstreetmap.org/way/437438963",
+    "note": "Location from OpenStreetMap; no verified height recorded."
+  },
+  {
+    "name": "Orion Mall",
+    "category": "mall",
+    "lat": 13.0109788,
+    "lon": 77.5552238,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "https://www.openstreetmap.org/way/180837206",
+    "note": "Location from OpenStreetMap; no verified height recorded."
+  },
+  {
+    "name": "Phoenix Marketcity",
+    "category": "mall",
+    "lat": 12.9958,
+    "lon": 77.6963,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "https://en.wikipedia.org/wiki/Phoenix_Marketcity_(Bangalore)",
+    "note": "Coordinates from Wikipedia; no verified height recorded."
+  },
+
+  # TECH PARK
+  {
+    "name": "World Trade Center Bangalore",
+    "category": "tech park",
+    "lat": 13.0123,
+    "lon": 77.5562,
+    "height_m": 128,
+    "source_url": "https://www.skyscrapercenter.com/building/world-trade-center/9195",
+    "verified": True,
+    "coordinate_source_url": "https://en.wikipedia.org/wiki/World_Trade_Center_Bengaluru",
+    "note": "CVU / The Skyscraper Center reports 128 m architectural height; coordinates from Wikipedia."
+  },
+  {
+    "name": "Manyata Embassy Business Park (tallest tower)",
+    "category": "tech park",
+    "lat": 13.0475,
+    "lon": 77.6207,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "https://en.wikipedia.org/wiki/Manyata_Embassy_Business_Park",
+    "note": "The Manyata tech park test point is retained; no verified building height found from authoritative source."
+  },
+  {
+    "name": "Brigade Gateway",
+    "category": "tech park",
+    "lat": 13.0123565,
+    "lon": 77.5564286,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "https://www.openstreetmap.org/way/1428671181",
+    "note": "Location from OpenStreetMap; no verified height recorded for the complex."
+  },
+  {
+    "name": "Bagmane Tech Park",
+    "category": "tech park",
+    "lat": 12.978383,
+    "lon": 77.660947,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "Overture Places (Bagmane Tech Park, CV Raman Nagar)",
+    "note": "Location from Overture Places release 2026-10-21.0; no verified height recorded."
+  },
+  {
+    "name": "Bagmane World Technology Centre",
+    "category": "tech park",
+    "lat": 12.9843034,
+    "lon": 77.6946207,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "https://www.openstreetmap.org/way/91237236",
+    "note": "Location from OpenStreetMap; no verified height recorded."
+  },
+  {
+    "name": "Embassy GolfLinks Business Park",
+    "category": "tech park",
+    "lat": 12.949102,
+    "lon": 77.644314,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "Overture Places (Embassy GolfLinks Business Park)",
+    "note": "Location from Overture Places release 2026-10-21.0; no verified height recorded."
+  },
+  {
+    "name": "Embassy TechVillage",
+    "category": "tech park",
+    "lat": 12.928328,
+    "lon": 77.6918,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "Overture Places (Embassy Tech Village)",
+    "note": "Location from Overture Places release 2026-10-21.0; no verified height recorded."
+  },
+  {
+    "name": "Electronics City Phase 1",
+    "category": "tech park",
+    "lat": 12.842835,
+    "lon": 77.658392,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "Overture Places (Electronics City Phase 1)",
+    "note": "Location from Overture Places release 2026-10-21.0; no verified height recorded."
+  },
+  {
+    "name": "International Tech Park Bangalore (ITPB)",
+    "category": "tech park",
+    "lat": 12.98584,
+    "lon": 77.735508,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "Overture Places (International Tech Park Bangalore, Whitefield)",
+    "note": "Location from Overture Places release 2026-10-21.0; no verified height recorded."
+  },
+  {
+    "name": "RMZ Ecospace",
+    "category": "tech park",
+    "lat": 12.926435,
+    "lon": 77.68052,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "Overture Places (RMZ Ecospace, Bellandur)",
+    "note": "Location from Overture Places release 2026-10-21.0; no verified height recorded."
+  },
+  {
+    "name": "Prestige Tech Park",
+    "category": "tech park",
+    "lat": 12.942657,
+    "lon": 77.69447,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "Overture Places (Prestige Tech Park)",
+    "note": "Location from Overture Places release 2026-10-21.0; no verified height recorded."
+  },
+
+  # AIRPORT
+  {
+    "name": "Kempegowda International Airport (Terminal 1)",
+    "category": "airport",
+    "lat": 13.1979,
+    "lon": 77.7063,
+    "height_m": None,
+    "source_url": None,
+    "verified": False,
+    "coordinate_source_url": "https://en.wikipedia.org/wiki/Kempegowda_International_Airport",
+    "note": "Terminal 1 coordinates from Wikipedia / OpenStreetMap. Northern boundary of metropolitan region; no verified building height recorded."
+  }
+]
+
+def main():
+    content = json.dumps(landmarks, indent=2) + "\n"
+    DATA_PATH.write_text(content, encoding="utf-8")
+    WEB_PATH.write_text(content, encoding="utf-8")
+    print(f"Updated {DATA_PATH} and {WEB_PATH} with {len(landmarks)} landmarks.")
+    categories = set(l["category"] for l in landmarks)
+    print("Categories represented:", sorted(categories))
+
+if __name__ == "__main__":
+    main()
