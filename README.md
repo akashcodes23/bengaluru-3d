@@ -652,30 +652,30 @@ Procedural architectural models replace generic extruded boxes for three iconic 
 1. **Vidhana Soudha (46.0 m verified height):**
    - *Overture Building ID:* `e3b7fdca-863f-4855-a926-c3fb2ee37ec0`
    - *Footprint:* Chunk `-1,0`, index 192, 76 vertices (152 coordinates).
-   - *Architecture:* Neo-Dravidian legislative palace with central granite drum, ribbed hemispherical dome crowned by the four-lion Ashoka emblem and gilded kalasa finial (46 m peak), 4 octagonal corner chattris with domed pavilions (32 m), and grand eastern portico with 45 steps, 12 Dravidian columns, and triangular pediment.
+   - *Architecture:* Civic legislative building with central drum, hemispherical dome crowned by a spire finial (46 m peak), 4 corner domed pavilions (32 m), and eastern entrance portico with stepped approach and columns.
    - *Seating:* Foundation skirt extends into terrain to ensure zero gap or sinking at 1x, 2x, and 3x vertical exaggeration.
    - *Budget:* 4,396 triangles across 62 draw calls (budget < 20,000 triangles).
 
 2. **UB City Complex (123.0 m verified UB Tower):**
    - *Overture Building ID:* `a1241754-d5b2-4e96-af7b-4fba8ccd87c1`
    - *Footprint:* Chunk `0,0`, index 70, 19 vertices (38 coordinates).
-   - *Architecture:* 4-tower luxury commercial complex on shared 15 m retail/dining podium:
-     - UB Tower (123.0 m): curved glass facade with tiered setbacks at 75 m, 95 m, and open-air rooftop crown with architectural spire.
-     - Concorde Tower (95.0 m, index 64): modernist glass and steel tower.
+   - *Architecture:* 4-tower commercial complex on shared 15 m podium:
+     - UB Tower (123.0 m): curved glass facade with tiered setbacks at 75 m, 95 m, and rooftop crown with architectural spire.
+     - Concorde Tower (95.0 m, index 64): glass and steel tower.
      - Canberra Tower (85.0 m, index 65): stepped corporate tower.
      - Comet Tower (72.0 m, index 68/69): curtain-wall high-rise.
    - *Budget:* 264 triangles across 9 draw calls (budget < 20,000 triangles).
 
-3. **Kempegowda International Airport Terminal 2 (UNESCO Prix Versailles "Terminal in a Garden"):**
+3. **Kempegowda International Airport Terminal 2:**
    - *Overture Building ID:* `82ca460a-d066-431b-b056-0b1abfc97d22`
    - *Footprint:* Chunk `13,25`, index 39, 74 vertices (148 coordinates), 106,580 m² area.
-   - *Architecture:* Expansive engineered bamboo diagrid roof canopy with cantilevered eaves, 18 tiered pyramidal skylight lanterns in a 6×3 grid bringing natural sunlight into the concourse, 16 flared structural bamboo tree columns, and floor-to-ceiling glass curtain walls revealing lush interior botanical gardens and terraced greenery.
-   - *Height Status:* Unverified procedural estimate (~25.0 m concourse height from Skidmore, Owings & Merrill architectural design publications; not a survey-verified height).
+   - *Architecture:* Terminal concourse with cantilevered roof canopy slab, 18 tiered skylights in a 6×3 grid, 16 flared support columns, and perimeter glass curtain walls over interior terraces.
+   - *Height Status:* Unverified procedural estimate (~25.0 m concourse height; not a survey-verified height).
    - *Budget:* 1,188 triangles across 4 draw calls (budget < 20,000 triangles).
 
 ### Hero Landmark Element Classification & Claims Audit (v2)
 
-All procedural components in `web/hero-landmarks.js` are strictly categorized into data-backed footprints, proportional architectural stylisations based on footprint bounding boxes or verified heights, and unverified assumptions. All architectural assertions derived purely from memory (such as step counts, specific column counts, firm names, "bamboo diagrid", and "garden terrace") have been neutralised:
+All procedural components in `web/hero-landmarks.js` are strictly categorized into data-backed footprints, proportional architectural stylisations based on footprint bounding boxes or verified heights, and unverified assumptions. All architectural assertions derived purely from memory have been neutralised:
 
 | Landmark | Element | Classification | Rationale / Ground Truth |
 |---|---|---|---|
@@ -691,7 +691,7 @@ All procedural components in `web/hero-landmarks.js` are strictly categorized in
 | | Other complex towers (64, 65, 68) | Estimated heights (unverified) | Labelled explicitly as `(procedural estimate)` in inspect card. UB Tower (123 m) is the only verified height. |
 | **KIA Terminal 2** | Terminal concourse footprint | From footprint | Exact 106,580 m² perimeter boundary from chunk `13,25`, index 39 (74 vertices, centroid 8.37 m from landmark point). |
 | | Overhanging roof canopy | Proportional (ratio ~1.05 of concourse bounds) | Cantilevered overhanging roof canopy enclosing concourse footprint. |
-| | Skylight lanterns | Proportional (grid across canopy area) | Rhythmic natural lightwell lanterns across canopy roof. |
+| | Skylights | Proportional (grid across canopy area) | Rhythmic skylights across canopy roof. |
 | | Flared interior columns & glass walls | Proportional (height = 16 m) | Glazed perimeter curtain walls and interior support columns. |
 | | Concourse height (25 m) | Estimate with no source (unverified) | Procedural estimate with no survey source; verified is false. |
 
@@ -712,9 +712,9 @@ All procedural components in `web/hero-landmarks.js` are strictly categorized in
 
 - **2. Draw-Call Optimization & Merging:**
   - Hero landmarks were previously generating 50–60 draw calls each. Using `BufferGeometryUtils.mergeGeometries`, all sub-geometries are now pre-transformed and merged per material:
-    - *Vidhana Soudha:* **4 draw calls** (granite base/drum/steps, dome/chattris, kalasa gold, pillars), 4,408 triangles.
+    - *Vidhana Soudha:* **4 draw calls** (granite base/drum/steps, dome/chattris, roof finials, pillars), 4,408 triangles.
     - *UB City:* **4 draw calls** (podium, tower lower/Concorde, mid/Canberra/Comet, crown/spire), 264 triangles.
-    - *KIA Terminal 2:* **4 draw calls** (curtain concourse, garden terrace, bamboo roof/lanterns/columns, skylights), 1,188 triangles.
+    - *KIA Terminal 2:* **4 draw calls** (curtain concourse, lower terrace, roof canopy/columns, skylights), 1,188 triangles.
   - *LOD Isolation Test (at 289.8 m vs 309.8 m):*
     - At 289.8 m (Hero active): 76 draw calls, 634,100 triangles (`docs/screenshots/hero_lod_290m.jpg`).
     - At 309.8 m (Chunk box active): 109 draw calls, 355,182 triangles (`docs/screenshots/hero_lod_310m.jpg`).
@@ -729,7 +729,7 @@ All procedural components in `web/hero-landmarks.js` are strictly categorized in
   - Footprint Overture ID: `82ca460a-d066-431b-b056-0b1abfc97d22`, chunk `13,25`, index 39, area 106,580 m², centroid is 8.37 m from `landmarks.json` coordinates.
   - Stored Overture `name` field in Parquet cache: `'Terminal 2'`.
   - Git history audit: Terminal 2 was originally added with `verified: true` and `height_m: 25` in commit `d71096b` ("Phase 3: Procedural hero landmarks") with `source_url: "https://en.wikipedia.org/wiki/Kempegowda_International_Airport"`.
-  - Reclassified to `verified: false, height_m: null`; the 25.0 m height is an estimate with no source (all references to SOM publications removed).
+  - Reclassified to `verified: false, height_m: null`; the 25.0 m height is an estimate with no source (all references to unverified design publications removed).
   - Verified landmark count strictly maintained at 3 (Vidhana Soudha 46 m, UB City UB Tower 123 m, WTC Bangalore 128 m).
   - Inspect card displays `"― (no verified height)"` and `"unverified (procedural estimate)"`.
 
@@ -819,7 +819,7 @@ All procedural components in `web/hero-landmarks.js` are strictly categorized in
   - *Fade Distance Impact:* Vehicles fade smoothly between 2,000 m and 2,500 m. Within 2.5 km, there are 15 chunks with **6,782 potential vehicles**. Beyond 2.5 km, 66 chunks (25,598 vehicles) are rendered at 0 opacity. Thus, while the buffer cap triggers at 20,000 instances when viewing wide regions, the maximum simultaneously visible vehicle count within the 2.5 km fade envelope is 6,782.
 
 - **6. Claims Audit v2 & Memory Scrubbing:**
-  - All memory-based assertions (Ashoka emblem, SOM publications, "bamboo diagrid", step/column counts, setback heights) scrubbed.
+  - All memory-based assertions (emblem sculptures, architectural firm publications, material assertions, step/column counts, setback heights) scrubbed.
   - Procedural elements classified as either "from footprint" or "proportional".
   - Complex tower names confirmed from `web/data/building_names.json`:
     - Chunk `0,0` index 70: `'Concorde'` (in complex, UB Tower footprint)
@@ -853,9 +853,9 @@ All procedural components in `web/hero-landmarks.js` are strictly categorized in
     - `docs/screenshots/hero_ub_city_1730.jpg` (Golden Hour: warm reflections across 4-tower complex)
     - `docs/screenshots/hero_ub_city_2100.jpg` (Night: modern glowing corporate office windows)
   - *Kempegowda International Airport Terminal 2:*
-    - `docs/screenshots/hero_kia_t2_1200.jpg` (Midday: bamboo diagrid roof canopy and tiered skylights)
-    - `docs/screenshots/hero_kia_t2_1730.jpg` (Golden Hour: warm golden timber tones across airport terminal)
-    - `docs/screenshots/hero_kia_t2_2100.jpg` (Night: warm interior garden illumination and lantern glow)
+    - `docs/screenshots/hero_kia_t2_1200.jpg` (Midday: roof canopy and tiered skylights)
+    - `docs/screenshots/hero_kia_t2_1730.jpg` (Golden Hour: warm timber tones across airport terminal)
+    - `docs/screenshots/hero_kia_t2_2100.jpg` (Night: interior illumination and skylight glow)
 - **B3. LOD Switch Proof (300 m threshold):**
   - *At 289.8 m (< 300 m):* Procedural hero mesh is visible (`heroGroup.visible = true`); normal chunk box is hidden (`normalMesh.visible = false`).
     - Evidence: `docs/screenshots/hero_lod_290m.jpg` (76 draw calls, 634,100 triangles)
@@ -925,7 +925,7 @@ All procedural components in `web/hero-landmarks.js` are strictly categorized in
 
 ### 6. Terminal 2 Pipeline Height Synchronization & Ground Truth
 - Sourced height in data chunk `c_13_25.json` record 39: `height = 12.8 m`, `source = 1` (4 floors $\times 3.2\text{ m}$, matching Overture Parquet record `num_floors: 4`, Overture ID `82ca460a-d066-431b-b056-0b1abfc97d22`).
-- Procedural hero model updated: total concourse height set to **12.8 m** (concourse body 9.5 m, canopy 1.3 m, lanterns/skylights 2.0 m to reach 12.8 m apex). Normal box LOD extrudes to exactly 12.8 m.
+- Procedural hero model updated: total concourse height set to **12.8 m** (concourse body 9.5 m, canopy 1.3 m, skylights 2.0 m to reach 12.8 m apex). Normal box LOD extrudes to exactly 12.8 m.
 - Stored building name confirmed as `'Terminal 2'`.
 - All procedural sub-elements derived strictly from footprint bounds using documented ratios.
 

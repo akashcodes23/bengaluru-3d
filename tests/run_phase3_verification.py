@@ -53,7 +53,7 @@ def run_phase3_verification():
             "chunk_key": t2["chunk"],
             "index": t2["index"],
             "vertex_count": len(t2["polygon"]) // 2,
-            "height": f"{t2['height']:.1f} m (garden terminal architectural model)",
+            "height": f"{t2['height']:.1f} m (terminal architectural model)",
             "poly_pts": len(t2["polygon"])
         }
     ]
@@ -140,9 +140,9 @@ def run_phase3_verification():
                 "lon": 77.71856,
                 "alt": 210,
                 "times": [
-                    {"label": "1200", "time": 48, "desc": "12:00 Midday (bamboo diagrid roof & tiered skylights)"},
+                    {"label": "1200", "time": 48, "desc": "12:00 Midday (roof canopy & tiered skylights)"},
                     {"label": "1730", "time": 70, "desc": "17:30 Golden Hour (warm amber canopy tones)"},
-                    {"label": "2100", "time": 84, "desc": "21:00 Night (warm interior garden & lantern glow)"}
+                    {"label": "2100", "time": 84, "desc": "21:00 Night (interior illumination & skylight glow)"}
                 ]
             }
         ]
@@ -286,7 +286,7 @@ def run_phase3_verification():
 
         print(f"Captured 1.0x Exaggeration: {exagg_1x_jpg} ({os.path.getsize(exagg_1x_jpg)/1024:.1f} KB)")
         print(f"Captured 3.0x Exaggeration: {exagg_3x_jpg} ({os.path.getsize(exagg_3x_jpg)/1024:.1f} KB)")
-        print("Confirmation: Ground elevation under Vidhana Soudha footprint scales with exaggeration (Y = baseElevation * uExaggeration); palace sits firmly on terrain with zero floating gap and zero clipping.")
+        print("Confirmation: Ground elevation under Vidhana Soudha footprint scales with exaggeration (Y = baseElevation * uExaggeration); building sits firmly on terrain with zero floating gap and zero clipping.")
         print()
 
         # ---------------------------------------------------------------------

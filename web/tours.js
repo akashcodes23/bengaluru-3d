@@ -95,15 +95,10 @@ export const TOURS_CONFIG = [
     ]
   },
   {
-    id: "silicon-plateau",
-    title: "Silicon Plateau",
+    id: "silicon-plateau-north",
+    title: "Silicon Plateau: North and Central",
     time: 12.0, // 12:00 Day Midday
     traffic: false,
-    // Dropped to respect <= 4 min (240 s) budget:
-    // - Brigade Gateway (co-located with WTC, 25 m separation)
-    // - Electronics City Phase 1 (12 km southern outlier, adds >150 s flight)
-    // - ITPB (8 km eastern outlier in Whitefield, adds >100 s flight)
-    // - Bagmane WTC, Embassy TechVillage, Prestige Tech Park (redundant ORR clustering)
     waypoints: [
       {
         name: "World Trade Center Bangalore",
@@ -117,10 +112,21 @@ export const TOURS_CONFIG = [
         }
       },
       {
+        name: "Brigade Gateway",
+        lat: 13.0123565,
+        lon: 77.5564286,
+        alt_m: 270,
+        dwell_s: 5,
+        caption: {
+          text: "Brigade Gateway · tech park · Height not verified",
+          source: "landmarks.json: Brigade Gateway"
+        }
+      },
+      {
         name: "Manyata Embassy Business Park (tallest tower)",
         lat: 13.0475,
         lon: 77.6207,
-        alt_m: 250,
+        alt_m: 270,
         dwell_s: 5,
         caption: {
           text: "Manyata Embassy Business Park (tallest tower) · tech park · Height not verified",
@@ -131,7 +137,7 @@ export const TOURS_CONFIG = [
         name: "Bagmane Tech Park",
         lat: 12.978383,
         lon: 77.660947,
-        alt_m: 250,
+        alt_m: 260,
         dwell_s: 5,
         caption: {
           text: "Bagmane Tech Park · tech park · Height not verified",
@@ -142,22 +148,85 @@ export const TOURS_CONFIG = [
         name: "Embassy GolfLinks Business Park",
         lat: 12.949102,
         lon: 77.644314,
-        alt_m: 250,
+        alt_m: 260,
         dwell_s: 5,
         caption: {
           text: "Embassy GolfLinks Business Park · tech park · Height not verified",
           source: "landmarks.json: Embassy GolfLinks Business Park"
+        }
+      }
+    ]
+  },
+  {
+    id: "silicon-plateau-south",
+    title: "Silicon Plateau: East and South",
+    time: 12.0, // 12:00 Day Midday
+    traffic: false,
+    waypoints: [
+      {
+        name: "International Tech Park Bangalore (ITPB)",
+        lat: 12.98584,
+        lon: 77.735508,
+        alt_m: 270,
+        dwell_s: 5,
+        caption: {
+          text: "International Tech Park Bangalore (ITPB) · tech park · Height not verified",
+          source: "landmarks.json: International Tech Park Bangalore (ITPB)"
+        }
+      },
+      {
+        name: "Bagmane World Technology Centre",
+        lat: 12.9843034,
+        lon: 77.6946207,
+        alt_m: 270,
+        dwell_s: 5,
+        caption: {
+          text: "Bagmane World Technology Centre · tech park · Height not verified",
+          source: "landmarks.json: Bagmane World Technology Centre"
+        }
+      },
+      {
+        name: "Prestige Tech Park",
+        lat: 12.942657,
+        lon: 77.69447,
+        alt_m: 270,
+        dwell_s: 5,
+        caption: {
+          text: "Prestige Tech Park · tech park · Height not verified",
+          source: "landmarks.json: Prestige Tech Park"
+        }
+      },
+      {
+        name: "Embassy TechVillage",
+        lat: 12.928328,
+        lon: 77.6918,
+        alt_m: 270,
+        dwell_s: 5,
+        caption: {
+          text: "Embassy TechVillage · tech park · Height not verified",
+          source: "landmarks.json: Embassy TechVillage"
         }
       },
       {
         name: "RMZ Ecospace",
         lat: 12.926435,
         lon: 77.68052,
-        alt_m: 250,
-        dwell_s: 6,
+        alt_m: 270,
+        dwell_s: 5,
         caption: {
           text: "RMZ Ecospace · tech park · Height not verified",
           source: "landmarks.json: RMZ Ecospace"
+        }
+      },
+      {
+        name: "Electronics City Phase 1",
+        lat: 12.842835,
+        lon: 77.658392,
+        alt_m: 270,
+        dwell_s: 5,
+        caption: {
+          text: "Electronics City Phase 1 · tech park · Height not verified",
+          source: "landmarks.json: Electronics City Phase 1"
         }
       }
     ]
@@ -540,6 +609,38 @@ export class TourManager {
 
       this.precomputedRequiredSegments.push(required);
     }
+
+    this.allTourChunksResident = new Set();
+    for (const reqSet of this.precomputedRequiredSegments) {
+      for (const k of reqSet) {
+        this.allTourChunksResident.add(k);
+      }
+    }
+  }
+
+  getAllTourChunkKeys() {
+    return this.allTourChunksResident || null;
+  }
+
+  prefetchAhead(progress, lookaheadMeters = 3000) {
+    if (!this.cameraCurve || !this.totalDistance) return;
+    const curDist = progress * this.totalDistance;
+    const endDist = Math.min(this.totalDistance, curDist + lookaheadMeters);
+    for (let d = curDist; d <= endDist; d += 250) {
+      const u = this.totalDistance > 0 ? d / this.totalDistance : 0;
+      const pt = this.cameraCurve.getPointAt(Math.min(1.0, Math.max(0.0, u)));
+      const camIx = Math.floor(pt.x / CHUNK_SIZE);
+      const camIy = Math.floor(-pt.z / CHUNK_SIZE);
+      for (let dx = -1; dx <= 1; dx++) {
+        for (let dy = -1; dy <= 1; dy++) {
+          const k = `${camIx + dx},${camIy + dy}`;
+          if (this.allTourChunksResident) this.allTourChunksResident.add(k);
+          if (this.requestChunkLoad && (!this.loadedChunks || !this.loadedChunks.has(k))) {
+            this.requestChunkLoad(camIx + dx, camIy + dy);
+          }
+        }
+      }
+    }
   }
 
   chainPurpleLineWays(tracks) {
@@ -680,6 +781,7 @@ export class TourManager {
    * Throttled to a 250 ms interval during frame updates to eliminate main thread overhead.
    */
   checkReadiness(progress, force = false) {
+    this.prefetchAhead(progress, 3000);
     const now = performance.now();
     if (!force && this._cachedReadiness && (now - (this._lastReadinessCheckTime || 0) < 250)) {
       this._lastScanDuration = 0;
@@ -1055,6 +1157,33 @@ export class TourManager {
     let minClearanceBuilding = 999999;
     const samples = [];
 
+    if (!this._chunkBuildingsCache) {
+      this._chunkBuildingsCache = new Map();
+    }
+
+    const fetchChunkBuildings = async (ix, iy) => {
+      const key = `${ix},${iy}`;
+      if (this._chunkBuildingsCache.has(key)) return this._chunkBuildingsCache.get(key);
+      const state = this.loadedChunks?.get(key) || this.loadedChunks?.get(`${ix}_${iy}`);
+      if (state && state.buildingText) {
+        try {
+          const parsed = JSON.parse(state.buildingText);
+          this._chunkBuildingsCache.set(key, parsed);
+          return parsed;
+        } catch (e) {}
+      }
+      try {
+        const res = await fetch(`data/c_${ix}_${iy}.json`);
+        if (res.ok) {
+          const data = await res.json();
+          this._chunkBuildingsCache.set(key, data);
+          return data;
+        }
+      } catch (e) {}
+      this._chunkBuildingsCache.set(key, []);
+      return [];
+    };
+
     for (let i = 0; i <= numSamples; i++) {
       const u = i / numSamples;
       const pt = curve.getPointAt(u);
@@ -1064,45 +1193,42 @@ export class TourManager {
 
       const groundY = await this.getElevation(x, north);
 
-      // Query tallest building top within 100 m
       let tallestBldgTop = groundY;
       let tallestBldgHeight = 0;
-      if (!this._parsedChunkBuildings) {
-        this._parsedChunkBuildings = new Map();
-      }
+      let tallestBldgId = "none";
+      let tallestBldgBase = groundY;
 
-      const allChunks = this.getChunks ? this.getChunks() : [];
-      for (const chunk of allChunks) {
-        const cx = (chunk.ix + 0.5) * CHUNK_SIZE;
-        const cy = (chunk.iy + 0.5) * CHUNK_SIZE;
-        // Check if chunk is within 1.2 km
-        if (Math.hypot(cx - x, cy - north) <= 1200) {
-          const key = `${chunk.ix},${chunk.iy}`;
-          const state = this.loadedChunks?.get(key) || this.loadedChunks?.get(`${chunk.ix}_${chunk.iy}`);
-          if (state && state.buildingText) {
-            let bldgs = this._parsedChunkBuildings.get(key);
-            if (!bldgs) {
-              try {
-                bldgs = JSON.parse(state.buildingText);
-                this._parsedChunkBuildings.set(key, bldgs);
-              } catch (e) {
-                bldgs = [];
+      const minIx = Math.floor((x - 100) / CHUNK_SIZE);
+      const maxIx = Math.floor((x + 100) / CHUNK_SIZE);
+      const minIy = Math.floor((north - 100) / CHUNK_SIZE);
+      const maxIy = Math.floor((north + 100) / CHUNK_SIZE);
+
+      for (let ix = minIx; ix <= maxIx; ix++) {
+        for (let iy = minIy; iy <= maxIy; iy++) {
+          const bldgs = await fetchChunkBuildings(ix, iy);
+          for (let bi = 0; bi < bldgs.length; bi++) {
+            const b = bldgs[bi];
+            const bH = b[0] || 0;
+            const coords = b[1];
+            if (coords && coords.length >= 2) {
+              let cx = 0, cy = 0;
+              const numPts = coords.length / 2;
+              for (let p = 0; p < coords.length; p += 2) {
+                cx += coords[p];
+                cy += coords[p + 1];
               }
-            }
-            if (Array.isArray(bldgs)) {
-              for (const b of bldgs) {
-                const bH = b[0] || 0;
-                const coords = b[1];
-                if (coords && coords.length >= 2) {
-                  const bx = chunk.ix * CHUNK_SIZE + coords[0];
-                  const by = chunk.iy * CHUNK_SIZE + coords[1];
-                  if (Math.hypot(bx - x, by - north) <= 100) {
-                    const topY = groundY + bH;
-                    if (topY > tallestBldgTop) {
-                      tallestBldgTop = topY;
-                      tallestBldgHeight = bH;
-                    }
-                  }
+              cx = ix * CHUNK_SIZE + (cx / numPts);
+              cy = iy * CHUNK_SIZE + (cy / numPts);
+
+              const dist = Math.hypot(cx - x, cy - north);
+              if (dist <= 100) {
+                const bBase = await this.getElevation(cx, cy);
+                const bTop = bBase + bH;
+                if (bTop > tallestBldgTop) {
+                  tallestBldgTop = bTop;
+                  tallestBldgHeight = bH;
+                  tallestBldgBase = bBase;
+                  tallestBldgId = `${ix}_${iy}#${bi}`;
                 }
               }
             }
@@ -1123,8 +1249,10 @@ export class TourManager {
         north,
         camY,
         groundY,
-        tallestBldgTop,
-        tallestBldgHeight,
+        bldgId: tallestBldgId,
+        bldgBase: tallestBldgBase,
+        bldgHeight: tallestBldgHeight,
+        bldgTop: tallestBldgTop,
         clrTerrain,
         clrBuilding,
         margin: Math.min(clrTerrain, clrBuilding)

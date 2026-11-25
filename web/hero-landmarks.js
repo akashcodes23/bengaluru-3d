@@ -5,7 +5,7 @@ import * as BufferGeometryUtils from "three/addons/utils/BufferGeometryUtils.js"
  * Procedural Hero Landmarks for Bengaluru 3D
  * 1. Vidhana Soudha (46 m verified height; central dome, corner chattris, pillared Dravidian porch)
  * 2. UB City (123 m verified UB Tower; 4-tower complex on shared podium)
- * 3. Kempegowda International Airport Terminal 2 (bamboo lattice roof, tiered skylights, glass curtain walls)
+ * 3. Kempegowda International Airport Terminal 2 (roof canopy, tiered skylights, glass curtain walls)
  *
  * Footprints sourced directly from real Overture data polygons.
  */
@@ -619,8 +619,8 @@ export class HeroLandmarksManager {
       roughness: 0.35,
       metalness: 0.45
     });
-    const goldMat = new THREE.MeshStandardMaterial({
-      color: 0xffd700,
+    const finialMat = new THREE.MeshStandardMaterial({
+      color: 0xd4af37,
       roughness: 0.25,
       metalness: 0.8
     });
@@ -635,10 +635,10 @@ export class HeroLandmarksManager {
 
     const graniteGeos = [];
     const domeGeos = [];
-    const goldGeos = [];
+    const finialGeos = [];
     const pillarGeos = [];
 
-    // A. Main Palace Base (extruded real 76-vertex footprint)
+    // A. Main Building Footprint Base (extruded real 76-vertex footprint)
     const shape = this.makeShape(data.polygon);
     const baseGeo = new THREE.ExtrudeGeometry(shape, {
       depth: 22.0,
@@ -648,7 +648,7 @@ export class HeroLandmarksManager {
     baseGeo.translate(0, -1.5, 0);
     graniteGeos.push(baseGeo);
 
-    // B. Central Grand Dravidian Dome (at -416.0, 890.0)
+    // B. Central Dome (at -416.0, 890.0)
     const cx = config.centroid[0];
     const cz = -config.centroid[1];
 
@@ -662,15 +662,15 @@ export class HeroLandmarksManager {
     domeGeo.translate(cx, 28.5, cz);
     domeGeos.push(domeGeo);
 
-    // Golden Kalasa Finial & Spire (reaching 46m)
+    // Crowning Spire & Finial (reaching 46m)
     const spireGeo = new THREE.CylinderGeometry(0.4, 2.0, 7.5, 12);
     spireGeo.translate(cx, 42.25, cz);
-    goldGeos.push(spireGeo);
+    finialGeos.push(spireGeo);
 
     // Crowning finial apex
     const apexGeo = new THREE.ConeGeometry(0.8, 2.0, 12);
     apexGeo.translate(cx, 45.0, cz);
-    goldGeos.push(apexGeo);
+    finialGeos.push(apexGeo);
 
     // C. 4 Corner Chattris (octagonal domed corner pavilions)
     const chattriCorners = [
@@ -694,10 +694,10 @@ export class HeroLandmarksManager {
 
       const fGeo = new THREE.ConeGeometry(0.4, 2.5, 8);
       fGeo.translate(x, 31.25, z);
-      goldGeos.push(fGeo);
+      finialGeos.push(fGeo);
     }
 
-    // D. Grand East Dravidian Entrance Porch (at x = -365, z = -890)
+    // D. Entrance Porch (at x = -365, z = -890)
     for (let s = 0; s < 4; s++) {
       const stepGeo = new THREE.BoxGeometry(32 - s * 2, 1.2, 22 - s * 4);
       stepGeo.translate(-365 + s * 2, s * 1.2 + 0.6, cz);
@@ -727,9 +727,9 @@ export class HeroLandmarksManager {
     domeMesh.castShadow = true;
     heroGroup.add(domeMesh);
 
-    const mergedGold = this.safeMergeGeometries(goldGeos);
-    const goldMesh = new THREE.Mesh(mergedGold, goldMat);
-    heroGroup.add(goldMesh);
+    const mergedFinial = this.safeMergeGeometries(finialGeos);
+    const finialMesh = new THREE.Mesh(mergedFinial, finialMat);
+    heroGroup.add(finialMesh);
 
     const mergedPillars = this.safeMergeGeometries(pillarGeos);
     const pillarMesh = new THREE.Mesh(mergedPillars, pillarMat);
@@ -753,7 +753,7 @@ export class HeroLandmarksManager {
       group,
       heroGroup,
       normalMesh,
-      materials: [graniteMat, domeMat, goldMat, pillarMat],
+      materials: [graniteMat, domeMat, finialMat, pillarMat],
       config
     });
     this.landmarksGroup.add(group);
@@ -894,8 +894,8 @@ export class HeroLandmarksManager {
     group.name = "hero_kia_t2";
     group.userData = { landmarkConfig: config };
 
-    // "Terminal in a Garden" Bamboo & Glass Materials
-    const bambooRoofMat = new THREE.MeshStandardMaterial({
+    // Roof Canopy & Curtain Wall Materials
+    const roofCanopyMat = new THREE.MeshStandardMaterial({
       color: 0xc89858,
       roughness: 0.65,
       metalness: 0.15
@@ -907,7 +907,7 @@ export class HeroLandmarksManager {
       transparent: true,
       opacity: 0.88
     });
-    const gardenGreenMat = new THREE.MeshStandardMaterial({
+    const terraceMat = new THREE.MeshStandardMaterial({
       color: 0x2d6a4f,
       roughness: 0.8,
       metalness: 0.05
@@ -924,8 +924,8 @@ export class HeroLandmarksManager {
     heroGroup.name = "hero_detail";
 
     const curtainGeos = [];
-    const gardenGeos = [];
-    const bambooGeos = [];
+    const terraceGeos = [];
+    const canopyGeos = [];
     const skylightGeos = [];
 
     // A. Main Glass Terminal Concourse Body (extruded real 74-vertex footprint, 9.5 m height = 0.74 ratio)
@@ -935,27 +935,27 @@ export class HeroLandmarksManager {
     curtainGeo.translate(0, -1.5, 0);
     curtainGeos.push(curtainGeo);
 
-    // B. Internal Botanical Terraces & Living Gardens (2.0 m height)
-    const gardenGeo = new THREE.BoxGeometry(320, 2.0, 180);
-    gardenGeo.translate(config.centroid[0], 1.0 - 1.5, -config.centroid[1]);
-    gardenGeos.push(gardenGeo);
+    // B. Internal Terraces (2.0 m height)
+    const terraceGeo = new THREE.BoxGeometry(320, 2.0, 180);
+    terraceGeo.translate(config.centroid[0], 1.0 - 1.5, -config.centroid[1]);
+    terraceGeos.push(terraceGeo);
 
-    // C. Engineered Bamboo Diagrid Canopy (1.3 m slab, seated at 9.5 m concourse top, reaching 10.8 m)
+    // C. Roof Canopy Slab (1.3 m slab, seated at 9.5 m concourse top, reaching 10.8 m)
     const roofGeo = new THREE.BoxGeometry(420, 1.3, 240);
     roofGeo.translate(config.centroid[0], 10.15 - 1.5, -config.centroid[1]);
-    bambooGeos.push(roofGeo);
+    canopyGeos.push(roofGeo);
 
-    // D. 18 Tiered Skylight Lanterns (6 x 3 rhythmic grid reaching total 12.8 m top)
+    // D. 18 Tiered Skylights (6 x 3 rhythmic grid reaching total 12.8 m top)
     const cx = config.centroid[0];
     const cz = -config.centroid[1];
     for (let gx = -2.5; gx <= 2.5; gx += 1.0) {
       for (let gz = -1.0; gz <= 1.0; gz += 1.0) {
         const lx = cx + gx * 65.0;
         const lz = cz + gz * 65.0;
-        // Skylight lantern base (1.0 m height, 10.8 m to 11.8 m)
+        // Skylight raised base (1.0 m height, 10.8 m to 11.8 m)
         const skBaseGeo = new THREE.BoxGeometry(22, 1.0, 22);
         skBaseGeo.translate(lx, 11.3 - 1.5, lz);
-        bambooGeos.push(skBaseGeo);
+        canopyGeos.push(skBaseGeo);
 
         // Skylight pyramid glass cap (1.0 m height, 11.8 m to 12.8 m)
         const skCapGeo = new THREE.ConeGeometry(14, 1.0, 4);
@@ -965,14 +965,14 @@ export class HeroLandmarksManager {
       }
     }
 
-    // E. 16 Bamboo Flared Tree Columns supporting the roof (9.5 m height)
+    // E. 16 Flared Support Columns supporting the roof (9.5 m height)
     for (let gx = -1.5; gx <= 1.5; gx += 1.0) {
       for (let gz = -1.5; gz <= 1.5; gz += 1.0) {
         const px = cx + gx * 85.0;
         const pz = cz + gz * 50.0;
         const colGeo = new THREE.CylinderGeometry(2.5, 0.8, 9.5, 8);
         colGeo.translate(px, 4.75 - 1.5, pz);
-        bambooGeos.push(colGeo);
+        canopyGeos.push(colGeo);
       }
     }
 
@@ -982,14 +982,14 @@ export class HeroLandmarksManager {
     curtainMesh.castShadow = true;
     heroGroup.add(curtainMesh);
 
-    const mergedGarden = this.safeMergeGeometries(gardenGeos);
-    const gardenMesh = new THREE.Mesh(mergedGarden, gardenGreenMat);
-    heroGroup.add(gardenMesh);
+    const mergedTerrace = this.safeMergeGeometries(terraceGeos);
+    const terraceMesh = new THREE.Mesh(mergedTerrace, terraceMat);
+    heroGroup.add(terraceMesh);
 
-    const mergedBamboo = this.safeMergeGeometries(bambooGeos);
-    const roofMesh = new THREE.Mesh(mergedBamboo, bambooRoofMat);
-    roofMesh.castShadow = true;
-    heroGroup.add(roofMesh);
+    const mergedCanopy = this.safeMergeGeometries(canopyGeos);
+    const canopyMesh = new THREE.Mesh(mergedCanopy, roofCanopyMat);
+    canopyMesh.castShadow = true;
+    heroGroup.add(canopyMesh);
 
     const mergedSkylights = this.safeMergeGeometries(skylightGeos);
     const skylightMesh = new THREE.Mesh(mergedSkylights, skylightGlassMat);
@@ -999,7 +999,7 @@ export class HeroLandmarksManager {
     const normalGeo = new THREE.ExtrudeGeometry(shape, { depth: 12.8, bevelEnabled: false });
     normalGeo.rotateX(-Math.PI / 2);
     normalGeo.translate(0, -1.5, 0);
-    const normalMesh = new THREE.Mesh(normalGeo, bambooRoofMat);
+    const normalMesh = new THREE.Mesh(normalGeo, roofCanopyMat);
     normalMesh.name = "normal_box";
 
     group.add(heroGroup);
@@ -1009,7 +1009,7 @@ export class HeroLandmarksManager {
       group,
       heroGroup,
       normalMesh,
-      materials: [bambooRoofMat, curtainGlassMat, gardenGreenMat, skylightGlassMat],
+      materials: [roofCanopyMat, curtainGlassMat, terraceMat, skylightGlassMat],
       config
     });
     this.landmarksGroup.add(group);

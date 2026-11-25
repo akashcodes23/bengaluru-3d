@@ -531,7 +531,9 @@ function extractMajorRoads(records, terrain, ix, iy) {
     for (let j = i + 1; j < result.length; j++) {
       const r2 = result[j];
       if (r2.totalLength < 50.0) continue;
-      if (r1.class !== r2.class) continue;
+      // Motorway, trunk, and primary are treated as one major arterial family
+      const majorFamily = new Set(["motorway", "trunk", "primary"]);
+      if (!majorFamily.has(r1.class) || !majorFamily.has(r2.class)) continue;
       const lenRatio = Math.max(r1.totalLength, r2.totalLength) / Math.min(r1.totalLength, r2.totalLength);
       if (lenRatio > 2.5) continue;
 

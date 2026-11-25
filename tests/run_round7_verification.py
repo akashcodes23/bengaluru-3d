@@ -416,9 +416,9 @@ async def run_round7_suite():
         # Terminal 2 apex height
         print("--- Terminal 2 Hero Mesh Apex vs Extrusion Box ---")
         print("  Body Concourse:            9.5 m")
-        print("  Bamboo Diagrid Canopy:    +1.3 m  (y = 10.8 m)")
+        print("  Roof Canopy Slab:         +1.3 m  (y = 10.8 m)")
         print("  Skylight Base:            +1.0 m  (y = 11.8 m)")
-        print("  Pyramid Lantern Cap:      +1.0 m  (y = 12.8 m)")
+        print("  Pyramid Skylight Cap:     +1.0 m  (y = 12.8 m)")
         print("  Apex Hero Mesh Height:    12.8 m")
         print("  Building Extrusion Height: 12.8 m (box depth: 12.8 m)")
         print("  -> Apex match: EXACT (12.8 m == 12.8 m: PASS)\n")
@@ -456,9 +456,9 @@ async def run_round7_suite():
         # Vidhana Soudha Visible Plinth Top
         print("\n--- Vidhana Soudha Plinth Top vs Ground ---")
         print("  Base foundation foot:       y = -1.5 m (embedded into terrain)")
-        print("  Visible Grand Plinth Top:   y = +4.8 m (monumental podium stairs)")
-        print("  Palace Column Terrace Floor: y = +20.5 m")
-        print("  Central Dome Gold Kalasa:   y = +46.0 m (verified landmark height)\n")
+        print("  Visible Grand Plinth Top:   y = +4.8 m (podium entrance stairs)")
+        print("  Column Terrace Floor:       y = +20.5 m")
+        print("  Central Dome Spire Finial:  y = +46.0 m (verified landmark height)\n")
 
         # -------------------------------------------------------------------------
         # ITEM 9: FEATURE FLAG AUDIT

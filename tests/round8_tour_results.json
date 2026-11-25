@@ -1,0 +1,322 @@
+[
+  {
+    "id": "core-city",
+    "name": "Core City",
+    "duration": 124.12254691123962,
+    "share_paused": 0.0,
+    "longest_pause": 0.0,
+    "mean_speed": 54.862417708814476,
+    "distance": 6809.663015726348,
+    "avg": 16.717629629629627,
+    "p95": 18.10000000000582,
+    "max": 200.0,
+    "over33": 3,
+    "verdict": "SMOOTH (p95 < 33 ms)",
+    "stats": {
+      "tourUpdateMs": 0.10223508817427762,
+      "scanMs": 0.0006597549459551262,
+      "renderMs": 1.3701359903126638,
+      "workerMs": 0.0448979593965472,
+      "uploadMs": 0.06379310349965918
+    },
+    "screenshots": {
+      "25": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_core-city_25pct.png",
+      "50": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_core-city_50pct.png",
+      "75": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_core-city_75pct.png",
+      "100": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_core-city_100pct.png"
+    },
+    "clearance": {
+      "minClearanceTerrain": 80.83776350618314,
+      "minClearanceBuilding": 140.93318922734522,
+      "minClearance": 80.83776350618314,
+      "samplesCount": 272,
+      "lowestSamples": [
+        {
+          "dist": 5475,
+          "u": 0.8051470588235294,
+          "x": -1049.3676838425238,
+          "north": 907.3557214650095,
+          "camY": 1136.0724139027423,
+          "groundY": 935.2346503965592,
+          "bldgId": "-1_0#219",
+          "bldgBase": 931.6179941984001,
+          "bldgHeight": 15.9,
+          "bldgTop": 947.5179941984001,
+          "clrTerrain": 80.83776350618314,
+          "clrBuilding": 148.5544197043422,
+          "margin": 80.83776350618314
+        },
+        {
+          "dist": 5500,
+          "u": 0.8088235294117647,
+          "x": -1074.4312798477035,
+          "north": 906.6892390753618,
+          "camY": 1135.9544924561376,
+          "groundY": 934.1370663920658,
+          "bldgId": "-1_0#218",
+          "bldgBase": 932.5878875136,
+          "bldgHeight": 15.9,
+          "bldgTop": 948.4878875136,
+          "clrTerrain": 81.81742606407192,
+          "clrBuilding": 147.46660494253763,
+          "margin": 81.81742606407192
+        },
+        {
+          "dist": 5450,
+          "u": 0.8014705882352942,
+          "x": -1024.3022325166223,
+          "north": 908.0274423083379,
+          "camY": 1136.1902787792892,
+          "groundY": 933.9155798987325,
+          "bldgId": "none",
+          "bldgBase": 933.9155798987325,
+          "bldgHeight": 0,
+          "bldgTop": 933.9155798987325,
+          "clrTerrain": 82.27469888055657,
+          "clrBuilding": 162.27469888055668,
+          "margin": 82.27469888055657
+        }
+      ]
+    }
+  },
+  {
+    "id": "silicon-plateau-north",
+    "name": "Silicon Plateau: North and Central",
+    "duration": 326.88020730018616,
+    "share_paused": 0.0,
+    "longest_pause": 0.0,
+    "mean_speed": 86.38727304346772,
+    "distance": 28238.289720546512,
+    "avg": 16.677933673469386,
+    "p95": 17.79999999998836,
+    "max": 183.30000000004657,
+    "over33": 2,
+    "verdict": "SMOOTH (p95 < 33 ms)",
+    "stats": {
+      "tourUpdateMs": 0.14714613620023648,
+      "scanMs": 0.0007651109384262145,
+      "renderMs": 1.0271665391486324,
+      "workerMs": 0.03716381415178257,
+      "uploadMs": 0.04840989387182802
+    },
+    "screenshots": {
+      "25": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_silicon-plateau-north_25pct.png",
+      "50": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_silicon-plateau-north_50pct.png",
+      "75": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_silicon-plateau-north_75pct.png",
+      "100": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_silicon-plateau-north_100pct.png"
+    },
+    "clearance": {
+      "minClearanceTerrain": 103.46440785774644,
+      "minClearanceBuilding": 183.46440785774644,
+      "minClearance": 103.46440785774644,
+      "samplesCount": 857,
+      "lowestSamples": [
+        {
+          "dist": 13950,
+          "u": 0.6511085180863477,
+          "x": 6506.386330167514,
+          "north": 4534.125621807298,
+          "camY": 1150.2930848406165,
+          "groundY": 926.8286769828701,
+          "bldgId": "none",
+          "bldgBase": 926.8286769828701,
+          "bldgHeight": 0,
+          "bldgTop": 926.8286769828701,
+          "clrTerrain": 103.46440785774644,
+          "clrBuilding": 183.46440785774644,
+          "margin": 103.46440785774644
+        },
+        {
+          "dist": 14000,
+          "u": 0.6534422403733956,
+          "x": 6527.716444999581,
+          "north": 4488.80278583456,
+          "camY": 1150.3167725788535,
+          "groundY": 926.7123690426974,
+          "bldgId": "none",
+          "bldgBase": 926.7123690426974,
+          "bldgHeight": 0,
+          "bldgTop": 926.7123690426974,
+          "clrTerrain": 103.60440353615604,
+          "clrBuilding": 183.60440353615604,
+          "margin": 103.60440353615604
+        },
+        {
+          "dist": 13975,
+          "u": 0.6522753792298717,
+          "x": 6517.067100885073,
+          "north": 4511.4783458290385,
+          "camY": 1150.3049116466136,
+          "groundY": 926.6509448121761,
+          "bldgId": "none",
+          "bldgBase": 926.6509448121761,
+          "bldgHeight": 0,
+          "bldgTop": 926.6509448121761,
+          "clrTerrain": 103.6539668344376,
+          "clrBuilding": 183.65396683443748,
+          "margin": 103.6539668344376
+        }
+      ]
+    }
+  },
+  {
+    "id": "silicon-plateau-south",
+    "name": "Silicon Plateau: East and South",
+    "duration": 330.77083587646484,
+    "share_paused": 0.0,
+    "longest_pause": 0.0,
+    "mean_speed": 150.01830016672454,
+    "distance": 49621.67854291388,
+    "avg": 16.702999545523404,
+    "p95": 17.699999999953434,
+    "max": 102.0,
+    "over33": 10,
+    "verdict": "SMOOTH (p95 < 33 ms)",
+    "stats": {
+      "tourUpdateMs": 0.18612036754492015,
+      "scanMs": 0.0005705341851724515,
+      "renderMs": 1.1434413813920523,
+      "workerMs": 0.037499999944967305,
+      "uploadMs": 0.05409090905026956
+    },
+    "screenshots": {
+      "25": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_silicon-plateau-south_25pct.png",
+      "50": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_silicon-plateau-south_50pct.png",
+      "75": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_silicon-plateau-south_75pct.png",
+      "100": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_silicon-plateau-south_100pct.png"
+    },
+    "clearance": {
+      "minClearanceTerrain": 125.19861931267542,
+      "minClearanceBuilding": 205.19861931267542,
+      "minClearance": 125.19861931267542,
+      "samplesCount": 855,
+      "lowestSamples": [
+        {
+          "dist": 6075,
+          "u": 0.28421052631578947,
+          "x": 10996.027702627307,
+          "north": -727.7878520912099,
+          "camY": 1144.9543430559195,
+          "groundY": 899.7557237432441,
+          "bldgId": "none",
+          "bldgBase": 899.7557237432441,
+          "bldgHeight": 0,
+          "bldgTop": 899.7557237432441,
+          "clrTerrain": 125.19861931267542,
+          "clrBuilding": 205.19861931267542,
+          "margin": 125.19861931267542
+        },
+        {
+          "dist": 6100,
+          "u": 0.28538011695906434,
+          "x": 10999.536700798073,
+          "north": -752.5543485909477,
+          "camY": 1144.8553544752606,
+          "groundY": 899.0349259420395,
+          "bldgId": "none",
+          "bldgBase": 899.0349259420395,
+          "bldgHeight": 0,
+          "bldgTop": 899.0349259420395,
+          "clrTerrain": 125.82042853322105,
+          "clrBuilding": 205.82042853322105,
+          "margin": 125.82042853322105
+        },
+        {
+          "dist": 6125,
+          "u": 0.28654970760233917,
+          "x": 11003.098132094776,
+          "north": -777.3590609476761,
+          "camY": 1144.7570597307913,
+          "groundY": 898.661229690796,
+          "bldgId": "none",
+          "bldgBase": 898.661229690796,
+          "bldgHeight": 0,
+          "bldgTop": 898.661229690796,
+          "clrTerrain": 126.09583003999535,
+          "clrBuilding": 206.09583003999535,
+          "margin": 126.09583003999535
+        }
+      ]
+    }
+  },
+  {
+    "id": "purple-line",
+    "name": "Namma Metro Purple Line",
+    "duration": 186.4528169631958,
+    "share_paused": 0.0,
+    "longest_pause": 0.0,
+    "mean_speed": 321.3863571027325,
+    "distance": 59923.391615344066,
+    "avg": 16.68380458124552,
+    "p95": 18.099999999976717,
+    "max": 183.29999999993015,
+    "over33": 2,
+    "verdict": "SMOOTH (p95 < 33 ms)",
+    "stats": {
+      "tourUpdateMs": 0.10363213453654485,
+      "scanMs": 0.0006977992515899687,
+      "renderMs": 1.340579710187586,
+      "workerMs": 0.04719626165439035,
+      "uploadMs": 0.03963414656861526
+    },
+    "screenshots": {
+      "25": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_purple-line_25pct.png",
+      "50": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_purple-line_50pct.png",
+      "75": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_purple-line_75pct.png",
+      "100": "/Users/akashgpatil/.gemini/antigravity/brain/86fc38d5-d7fe-45d5-8c7f-3089d5a9f7c1/tour_purple-line_100pct.png"
+    },
+    "clearance": {
+      "minClearanceTerrain": 103.42733821472575,
+      "minClearanceBuilding": 148.53781704262371,
+      "minClearance": 103.42733821472575,
+      "samplesCount": 411,
+      "lowestSamples": [
+        {
+          "dist": 6050,
+          "u": 0.5888077858880778,
+          "x": 1323.8627476773142,
+          "north": 431.9423402154872,
+          "camY": 1152.6291433359575,
+          "groundY": 929.2018051212316,
+          "bldgId": "none",
+          "bldgBase": 929.2018051212316,
+          "bldgHeight": 0,
+          "bldgTop": 929.2018051212316,
+          "clrTerrain": 103.42733821472575,
+          "clrBuilding": 183.42733821472586,
+          "margin": 103.42733821472575
+        },
+        {
+          "dist": 6025,
+          "u": 0.5863746958637469,
+          "x": 1348.2378563801958,
+          "north": 425.8790112054145,
+          "camY": 1151.4856101498876,
+          "groundY": 927.8574025227751,
+          "bldgId": "none",
+          "bldgBase": 927.8574025227751,
+          "bldgHeight": 0,
+          "bldgTop": 927.8574025227751,
+          "clrTerrain": 103.62820762711249,
+          "clrBuilding": 183.6282076271125,
+          "margin": 103.62820762711249
+        },
+        {
+          "dist": 8250,
+          "u": 0.8029197080291971,
+          "x": -436.9501482424484,
+          "north": 663.924807396622,
+          "camY": 1144.9462911204905,
+          "groundY": 921.0789217690473,
+          "bldgId": "none",
+          "bldgBase": 921.0789217690473,
+          "bldgHeight": 0,
+          "bldgTop": 921.0789217690473,
+          "clrTerrain": 103.86736935144336,
+          "clrBuilding": 183.86736935144324,
+          "margin": 103.86736935144336
+        }
+      ]
+    }
+  }
+]
