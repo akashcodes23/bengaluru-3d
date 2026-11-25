@@ -226,7 +226,7 @@ export const TOURS_CONFIG = [
   {
     id: "purple-line",
     title: "Namma Metro Purple Line",
-    time: 17.5, // 19:00 Night glow
+    time: 19.0, // 19:00 Night glow
     traffic: true,
     waypoints: [
       {
@@ -1009,6 +1009,7 @@ export class TourManager {
 
     // Check readiness gating: chunk under camera and every chunk within 1.2 km along next 1.0 km
     const readiness = this.checkReadiness(this.progress);
+    this.currentReadiness = readiness;
     if (!readiness.isReady) {
       if (!this.isStalled) {
         this.isStalled = true;

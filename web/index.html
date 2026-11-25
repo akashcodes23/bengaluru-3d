@@ -660,7 +660,7 @@
         <p style="margin: 0 0 8px;">• <strong>Illustrative Road Traffic:</strong> Vehicle streams along motorway, trunk, and primary roads are animated procedurally on the GPU as moving light points. India left-hand drive is modelled with white headlights in forward travel and red taillights in reverse travel. Pairs of major road polylines running parallel within 7 m to 40 m (angle &lt; 15°) are detected as divided carriageways and rendered as one-way streams (left carriageway forward with white headlights, right carriageway reverse with red taillights) using a geometric inference, not tagged data. Parallel pairs under 7 m (stacked flyovers or duplicate centrelines) and unpaired segments stay two-way (offset 1.8 m to the left of travel). Polylines crossing chunk boundaries are paired within each 1 km chunk independently. Elevated flyovers are not modelled; vehicle lights follow terrain-draped road geometry. Speeds and densities are illustrative and do not reflect live traffic or sensor telemetry.</p>
         <p style="margin: 0 0 8px;">• <strong>Building Heights & Raster:</strong> Heights come from OSM/Overture tags where present, otherwise from a 2018 GHSL raster of about 90 m cells (an average, so tall towers are underestimated). Tags above 165 m (not verified landmarks), or 5+ identical tags of 100 m or more within 300 m, are replaced by the raster value (228 buildings). Tall tags with a low raster value are shown as "OSM tag, unverified" (232 buildings). Buildings with no raster value use an area-based guess (4,994 buildings).</p>
         <p style="margin: 0 0 8px;">• <strong>Namma Metro Network:</strong> 102.79 one-way route km operational (Purple 43.48 km, Green 33.86 km, Yellow 18.05 km, Pink 7.40 km); 88 unique physical operational stations in OSM (80 elevated, 7 underground, 1 at grade), 91 when interchange stations are counted once per line. The difference from the public reference of 91 stations is not resolved. Metro trains are illustrative, not live.</p>
-        <p style="margin: 0 0 8px;">• <strong>Procedural Hero Landmarks:</strong> Prominent landmarks (Vidhana Soudha, UB City complex, and Kempegowda International Airport Terminal 2) feature procedural 3D models built upon real Overture/OSM footprint geometry. Stylised model, not survey geometry. Vidhana Soudha (46 m) and UB Tower (123 m) reflect verified heights. Other towers in the UB City complex use estimated heights (unverified). Kempegowda Terminal 2 height is 12.8 m, matching the data pipeline extrusion derived from 4 tagged floors (4 × 3.2 m).</p>
+        <p style="margin: 0 0 8px;">• <strong>Procedural Hero Landmarks:</strong> Prominent landmarks (Vidhana Soudha, UB City complex, and Kempegowda International Airport Terminal 2) feature procedural 3D models built upon real Overture/OSM footprint geometry. Stylised model, not survey geometry. Vidhana Soudha (46 m) and UB City (verified 123 m automatic match to nearest footprint within 60 m; the footprint may be a neighbouring tower of the complex) reflect verified heights. Other towers in the UB City complex use estimated heights (unverified). Kempegowda Terminal 2 height is 12.8 m, matching the data pipeline extrusion derived from 4 tagged floors (4 × 3.2 m).</p>
         <p style="margin: 0 0 8px;">• <strong>Assumptions:</strong> Blue, Orange, and Red lines forced to construction; Pink elevated section with start_date 2026-11-14 treated as operational; Pink tunnels treated as construction; viaduct deck height METRO_VIADUCT_M = 8.0 m; underground tunnel depth METRO_TUNNEL_DEPTH_M = -12.0 m (an assumed engineering depth); airport runway width AIRPORT_RUNWAY_WIDTH_M = 45.0 m unless an OSM width tag exists. Two Phase 1 portal ramp ways (Purple Line UG1: 508711042, 607901267) join the elevated viaduct at MG Road / Reach 1 (layer 2) to the underground tunnel at Cubbon Park / UG1 (layer -2); they are schematic transitions (grade ~11.6%, depth is an assumption) classified under portal mode derived from connectivity, rendered as a descending ramp interpolating from viaduct deck height (+8.0 m) down to the assumed tunnel depth (-12.0 m), hidden in default view, with the above-ground portion (+8m to 0m) rendered in default view so the viaduct deck transitions smoothly into terrain. Way 1189861890 is classified via level &lt; 0 tag rule. Green Line portal approach ways 142484399 and 607901295 carry embankment=yes and are retained as surface/at-grade approach tracks.</p>
         <p style="margin: 0;">• <strong>Verified Landmarks:</strong> Only landmarks with a sourced height are verified: Vidhana Soudha, UB City (UB Tower), and World Trade Center Bangalore.</p>
         <p style="margin: 8px 0 0;">• <strong>Guided Tours:</strong> Cinematic camera paths over open city data capped at 75 m/s. Progress is strictly gated on chunk readiness: movement advances only when the terrain and building chunk under the camera and all chunks within 1.2 km along the next 1.0 km of the path are fully loaded; otherwise the tour pauses and displays "Loading...". Station stops display only official name, line, and operational mode (&ldquo;&lt;name&gt; &middot; Purple Line &middot; elevated/underground/at-grade&rdquo;). Exiting or completing a tour cleanly restores user environmental and display settings.</p>
@@ -1121,7 +1121,7 @@
           if (vIsReverse > 0.5) {
             // Taillight: dark halo under vehicle point with crisp saturated red core
             if (dist < 0.65) {
-              gl_FragColor = vec4(vColor, max(vAlpha, 0.95));
+              gl_FragColor = vec4(vColor, vAlpha * 0.95);
             } else {
               // Dark boundary halo (near-black) around the red point so it contrasts on amber road
               float haloAlpha = (1.0 - dist) * 2.5 * vAlpha * 0.8;
@@ -1130,7 +1130,7 @@
           } else {
             // Headlight: bright white core
             if (dist < 0.85) {
-              gl_FragColor = vec4(vColor, max(vAlpha, 0.98));
+              gl_FragColor = vec4(vColor, vAlpha * 0.98);
             } else {
               float fade = (1.0 - dist) / 0.15;
               gl_FragColor = vec4(vColor, vAlpha * fade);
@@ -3743,7 +3743,7 @@
         if (heroNotice) {
           heroNotice.style.display = isHero ? "block" : "none";
           if (isUbTower) {
-            heroNotice.innerHTML = "<strong>Hero Landmark:</strong> verified 123 m (Skyscraper Center, 'UB Tower'), matched to the nearest footprint within 60 m (name in OSM data: Concorde)";
+            heroNotice.innerHTML = "<strong>Hero Landmark:</strong> verified 123 m (Skyscraper Center, 'UB Tower'), matched to the nearest footprint within 60 m of landmark coordinates (automatic match; the footprint may be a neighbouring tower of the complex; name in OSM data: Concorde)";
           } else {
             heroNotice.innerHTML = "<strong>Hero Landmark:</strong> Stylised model, not survey geometry";
           }
