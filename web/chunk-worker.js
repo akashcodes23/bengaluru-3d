@@ -16,7 +16,7 @@ const SOURCE_CODES = {
   raster: 3,
   "verified landmark": 4,
   "tag rejected": 5,
-  "corroborated by floors": 6,
+  "OSM tag, unverified": 6,
 };
 const ROAD_WIDTHS = {
   motorway: 14, trunk: 12, primary: 10, secondary: 8, tertiary: 6,
@@ -97,6 +97,7 @@ function packGeometry(geometry) {
   return {
     position: geometry.attributes.position.array,
     normal: geometry.attributes.normal.array,
+    uv: geometry.attributes.uv?.array || null,
     color: geometry.attributes.color?.array || null,
     colorNormalized: geometry.attributes.color?.normalized || false,
     index: geometry.index?.array || null,
@@ -147,12 +148,20 @@ function terrainHeight(terrain, ix, iy, x, north) {
   return a * (1 - ty) + b * ty;
 }
 
+const HERO_LANDMARK_CHUNKS = {
+  "-1,0": new Set([192]), // Vidhana Soudha
+  "0,0": new Set([70, 64, 65, 68, 69]), // UB City Complex
+  "13,25": new Set([39]) // KIA Terminal 2
+};
+
 function makeBuildingGeometry(buildings, bases, lod, ix, iy, terrain, exaggeration) {
   if (!Array.isArray(buildings) || lod === "far") {
-    return { geometry: null, bounds: new Float32Array() };
+    return { geometry: null, bounds: new Float32Array(), verticalExtents: new Float32Array() };
   }
   const geometries = [];
   const bounds = new Float32Array(buildings.length * 4);
+  const verticalExtents = new Float32Array(buildings.length * 2);
+
   buildings.forEach(([height, coordinates, source], index) => {
     if (!Number.isFinite(height) || !Array.isArray(coordinates) ||
         coordinates.length < 6 || coordinates.length % 2 !== 0 ||
@@ -169,24 +178,51 @@ function makeBuildingGeometry(buildings, bases, lod, ix, iy, terrain, exaggerati
     }
     const centerX = (minX + maxX) / 2;
     const centerNorth = (minNorth + maxNorth) / 2;
-    const rawBaseY = Number.isFinite(bases?.[index])
-      ? bases[index]
-      : terrainHeight(terrain, ix, iy, ...polygonCentroid(coordinates));
-    const baseY = rawBaseY * exaggeration;
-    const buildingHeight = Math.max(3, height) * exaggeration;
-    const centerY = baseY + buildingHeight / 2;
+
+    const [cx, cn] = polygonCentroid(coordinates);
+    const centerTerrain = terrain ? terrainHeight(terrain, ix, iy, cx, cn) : 0;
+    let minTerrain = centerTerrain;
+    let maxTerrain = centerTerrain;
+    if (terrain) {
+      for (let offset = 0; offset < coordinates.length; offset += 2) {
+        const tz = terrainHeight(terrain, ix, iy, coordinates[offset], coordinates[offset + 1]);
+        if (tz < minTerrain) minTerrain = tz;
+        if (tz > maxTerrain) maxTerrain = tz;
+      }
+    }
+
+    const effectiveHeight = Math.max(3, height);
+    // Ensure the roof is elevated above the terrain at all points of the footprint:
+    const roofElevation = Math.max(centerTerrain + effectiveHeight, maxTerrain + Math.min(3, effectiveHeight));
+    // Foundation skirt: extend 1.5m below the lowest ground point under the footprint
+    // so side walls embed into hillsides without floating gaps or digging down:
+    const baseElevation = minTerrain - 1.5;
+
+    const roofY = roofElevation * exaggeration;
+    const baseY = baseElevation * exaggeration;
+    const totalDepth = Math.max(1, roofY - baseY);
+    const centerY = (baseY + roofY) / 2;
+
     bounds.set([
       centerX,
       centerY,
       -centerNorth,
-      Math.hypot((maxX - minX) / 2, buildingHeight / 2, (maxNorth - minNorth) / 2),
+      Math.hypot((maxX - minX) / 2, totalDepth / 2, (maxNorth - minNorth) / 2),
     ], index * 4);
+
+    verticalExtents[index * 2] = baseY;
+    verticalExtents[index * 2 + 1] = roofY;
+
+    // Skip normal extrusion in chunk-worker for hero landmarks to prevent z-fighting with procedural hero mesh
+    if (HERO_LANDMARK_CHUNKS[`${ix},${iy}`]?.has(index)) {
+      return;
+    }
 
     let geometry;
     if (lod === "mid") {
       geometry = new THREE.BoxGeometry(
         Math.max(1, maxX - minX),
-        buildingHeight,
+        totalDepth,
         Math.max(1, maxNorth - minNorth),
       );
       geometry.translate(centerX, centerY, -centerNorth);
@@ -198,7 +234,7 @@ function makeBuildingGeometry(buildings, bases, lod, ix, iy, terrain, exaggerati
       }
       shape.closePath();
       geometry = new THREE.ExtrudeGeometry(shape, {
-        depth: buildingHeight,
+        depth: totalDepth,
         bevelEnabled: false,
         curveSegments: 1,
       });
@@ -208,65 +244,99 @@ function makeBuildingGeometry(buildings, bases, lod, ix, iy, terrain, exaggerati
     colorGeometry(geometry, source);
     geometries.push(geometry);
   });
-  return { geometry: merge(geometries), bounds };
+  return { geometry: merge(geometries), bounds, verticalExtents };
 }
 
-function shapeFromRecord(record, name) {
-  const coordinates = record.p;
-  if (!Array.isArray(coordinates) || coordinates.length < 6 ||
-      coordinates.length % 2 !== 0 ||
-      coordinates.some(value => !Number.isFinite(value))) {
-    throw new Error(`Invalid ${name} polygon.`);
-  }
-  const shape = new THREE.Shape();
-  shape.moveTo(coordinates[0], coordinates[1]);
-  for (let index = 2; index < coordinates.length; index += 2) {
-    shape.lineTo(coordinates[index], coordinates[index + 1]);
-  }
-  shape.closePath();
-  for (const holeCoordinates of record.holes || []) {
-    const hole = new THREE.Path();
-    hole.moveTo(holeCoordinates[0], holeCoordinates[1]);
-    for (let index = 2; index < holeCoordinates.length; index += 2) {
-      hole.lineTo(holeCoordinates[index], holeCoordinates[index + 1]);
-    }
-    hole.closePath();
-    shape.holes.push(hole);
-  }
-  return shape;
+const NEAR_MASK_RADIUS_M = 2000;
+const NEAR_MASK_SIZE = 512;
+const FAR_MASK_SIZE = 256;
+const CAMERA_START_X = 180;
+const CAMERA_START_NORTH = 620;
+
+function getMaskSizeForChunk(ix, iy) {
+  const chunkCenterX = ix * 1000 + 500;
+  const chunkCenterNorth = iy * 1000 + 500;
+  const dist = Math.hypot(chunkCenterX - CAMERA_START_X, chunkCenterNorth - CAMERA_START_NORTH);
+  return dist <= NEAR_MASK_RADIUS_M ? NEAR_MASK_SIZE : FAR_MASK_SIZE;
 }
 
-function drapeGeometry(geometry, offset, terrain, ix, iy, exaggeration) {
-  geometry.rotateX(-Math.PI / 2);
-  const positions = geometry.attributes.position;
-  for (let index = 0; index < positions.count; index += 1) {
-    const x = positions.getX(index);
-    const north = -positions.getZ(index);
-    positions.setY(
-      index,
-      terrainHeight(terrain, ix, iy, x, north) * exaggeration + offset,
-    );
-  }
-  positions.needsUpdate = true;
-  geometry.computeVertexNormals();
-  geometry.computeBoundingSphere();
-  return geometry;
-}
+function buildMaskTexture(ground, ix, iy) {
+  const maskSize = getMaskSizeForChunk(ix, iy);
+  const canvas = new OffscreenCanvas(maskSize, maskSize);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return null;
 
-function makePolygonGeometry(records, offset, kind, terrain, ix, iy, exaggeration) {
-  const geometries = [];
-  for (const record of records) {
-    let geometry = new THREE.ShapeGeometry(shapeFromRecord(record, kind));
-    if (terrain) {
-      geometry = drapeGeometry(geometry, offset, terrain, ix, iy, exaggeration);
-    }
-    else {
-      geometry.rotateX(-Math.PI / 2);
-      geometry.translate(0, offset, 0);
-    }
-    geometries.push(geometry);
+  ctx.fillStyle = "rgb(0,0,0)";
+  ctx.fillRect(0, 0, maskSize, maskSize);
+  ctx.globalCompositeOperation = "lighter";
+
+  const chunkWest = ix * 1000;
+  const chunkNorth = (iy + 1) * 1000;
+  const pxPerMetre = maskSize / 1000;
+
+  function toPx(x, north) {
+    return [
+      (x - chunkWest) * pxPerMetre,
+      (chunkNorth - north) * pxPerMetre,
+    ];
   }
-  return merge(geometries);
+
+  function drawPolygon(coordinates, holes) {
+    if (!Array.isArray(coordinates) || coordinates.length < 6) return;
+    ctx.beginPath();
+    const [startX, startY] = toPx(coordinates[0], coordinates[1]);
+    ctx.moveTo(startX, startY);
+    for (let i = 2; i < coordinates.length; i += 2) {
+      const [px, py] = toPx(coordinates[i], coordinates[i + 1]);
+      ctx.lineTo(px, py);
+    }
+    ctx.closePath();
+
+    for (const hole of holes || []) {
+      if (!Array.isArray(hole) || hole.length < 6) continue;
+      const [hx, hy] = toPx(hole[0], hole[1]);
+      ctx.moveTo(hx, hy);
+      for (let i = 2; i < hole.length; i += 2) {
+        const [px, py] = toPx(hole[i], hole[i + 1]);
+        ctx.lineTo(px, py);
+      }
+      ctx.closePath();
+    }
+    ctx.fill("evenodd");
+  }
+
+  // 1. Draw Green polygons in Red (rgb(255, 0, 0))
+  ctx.fillStyle = "rgb(255,0,0)";
+  for (const record of ground?.green || []) {
+    drawPolygon(record.p, record.holes);
+  }
+
+  // 2. Draw Water polygons in Green (rgb(0, 255, 0))
+  ctx.fillStyle = "rgb(0,255,0)";
+  const water = ground?.water || {};
+  for (const record of water.polygons || []) {
+    drawPolygon(record.p, record.holes);
+  }
+
+  // Also draw water lines (streams, canals) into green channel
+  if (Array.isArray(water.lines)) {
+    ctx.strokeStyle = "rgb(0,255,0)";
+    ctx.lineWidth = Math.max(1, 2.5 * pxPerMetre);
+    for (const record of water.lines) {
+      const coords = record.p;
+      if (!Array.isArray(coords) || coords.length < 4) continue;
+      ctx.beginPath();
+      const [sx, sy] = toPx(coords[0], coords[1]);
+      ctx.moveTo(sx, sy);
+      for (let i = 2; i < coords.length; i += 2) {
+        const [px, py] = toPx(coords[i], coords[i + 1]);
+        ctx.lineTo(px, py);
+      }
+      ctx.stroke();
+    }
+  }
+
+  return canvas.transferToImageBitmap();
 }
 
 function makeRibbonGeometry(records, widthForClass, offset, terrain, ix, iy, exaggeration) {
@@ -322,6 +392,7 @@ function makeRibbonGeometry(records, widthForClass, offset, terrain, ix, iy, exa
 function makeTerrainGeometry(terrain, ix, iy, exaggeration) {
   if (!terrain) return null;
   const positions = [];
+  const uvs = [];
   const indices = [];
   const width = terrain.width;
   const height = terrain.height;
@@ -331,6 +402,10 @@ function makeTerrainGeometry(terrain, ix, iy, exaggeration) {
         ix * 1000 + (col / (width - 1)) * 1000,
         terrain.heights[row * width + col] * exaggeration,
         -(iy * 1000 + (row / (height - 1)) * 1000),
+      );
+      uvs.push(
+        col / (width - 1),
+        row / (height - 1),
       );
     }
   }
@@ -345,10 +420,161 @@ function makeTerrainGeometry(terrain, ix, iy, exaggeration) {
   }
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
   geometry.setIndex(indices);
   geometry.computeVertexNormals();
   geometry.computeBoundingSphere();
   return geometry;
+}
+
+function reverseRoadPts(road) {
+  const oldPts = road.pts;
+  const numPts = oldPts.length / 4;
+  const newPts = new Float32Array(oldPts.length);
+  let cumDist = 0.0;
+  let prevX = oldPts[(numPts - 1) * 4];
+  let prevY = oldPts[(numPts - 1) * 4 + 1];
+  let prevZ = oldPts[(numPts - 1) * 4 + 2];
+  newPts[0] = prevX;
+  newPts[1] = prevY;
+  newPts[2] = prevZ;
+  newPts[3] = 0.0;
+
+  for (let i = 1; i < numPts; i++) {
+    const srcIdx = (numPts - 1 - i) * 4;
+    const curX = oldPts[srcIdx];
+    const curY = oldPts[srcIdx + 1];
+    const curZ = oldPts[srcIdx + 2];
+    const stepDist = Math.hypot(curX - prevX, curZ - prevZ);
+    cumDist += stepDist;
+    newPts[i * 4] = curX;
+    newPts[i * 4 + 1] = curY;
+    newPts[i * 4 + 2] = curZ;
+    newPts[i * 4 + 3] = cumDist;
+    prevX = curX;
+    prevY = curY;
+    prevZ = curZ;
+  }
+  road.pts = newPts;
+  road.totalLength = cumDist;
+}
+
+function extractMajorRoads(records, terrain, ix, iy) {
+  const result = [];
+  if (!records || !Array.isArray(records)) return result;
+
+  for (const record of records) {
+    const className = record.class;
+    if (!["motorway", "trunk", "primary"].includes(className)) continue;
+    const coordinates = record.p;
+    if (!Array.isArray(coordinates) || coordinates.length < 4 || coordinates.length % 2 !== 0) continue;
+
+    const points3D = [];
+    let cumDist = 0.0;
+
+    let prevX = coordinates[0];
+    let prevNorth = coordinates[1];
+    let prevRawY = terrainHeight(terrain, ix, iy, prevX, prevNorth);
+    let prevZ = -prevNorth;
+    points3D.push(prevX, prevRawY, prevZ, 0.0);
+
+    for (let i = 0; i + 3 < coordinates.length; i += 2) {
+      const x1 = coordinates[i], north1 = coordinates[i + 1];
+      const x2 = coordinates[i + 2], north2 = coordinates[i + 3];
+      const dx = x2 - x1, dn = north2 - north1;
+      const segLen = Math.hypot(dx, dn);
+      if (segLen < 0.01) continue;
+
+      const steps = terrain ? Math.max(1, Math.ceil(segLen / 35)) : 1;
+      for (let s = 1; s <= steps; s++) {
+        const t = s / steps;
+        const curX = x1 + dx * t;
+        const curNorth = north1 + dn * t;
+        const curRawY = terrainHeight(terrain, ix, iy, curX, curNorth);
+        const curZ = -curNorth;
+
+        const stepDist = Math.hypot(curX - prevX, curNorth - prevNorth);
+        cumDist += stepDist;
+        points3D.push(curX, curRawY, curZ, cumDist);
+
+        prevX = curX;
+        prevNorth = curNorth;
+        prevZ = curZ;
+      }
+    }
+
+    if (cumDist >= 15.0 && points3D.length >= 8) {
+      result.push({
+        class: className,
+        pts: new Float32Array(points3D),
+        totalLength: cumDist,
+        isOneWay: false,
+        flowDir: 0,
+      });
+    }
+  }
+
+  // Divided-carriageway detection: find parallel segments within 40m, angle < 15 deg over >= 30m
+  // (Lowered from 80m to 30m so clipped boundary partners pair symmetrically, preventing one-way fallback anomalies)
+  for (let i = 0; i < result.length; i++) {
+    const r1 = result[i];
+    if (r1.totalLength < 30.0) continue;
+    const p1 = r1.pts;
+    const dx1 = p1[p1.length - 4] - p1[0];
+    const dz1 = p1[p1.length - 2] - p1[2];
+    const hyp1 = Math.hypot(dx1, dz1);
+    if (hyp1 < 0.01) continue;
+    const ux1 = dx1 / hyp1, uz1 = dz1 / hyp1;
+
+    for (let j = i + 1; j < result.length; j++) {
+      const r2 = result[j];
+      if (r2.totalLength < 30.0) continue;
+      if (r1.isOneWay && r2.isOneWay) continue;
+      const p2 = r2.pts;
+      const dx2 = p2[p2.length - 4] - p2[0];
+      const dz2 = p2[p2.length - 2] - p2[2];
+      const hyp2 = Math.hypot(dx2, dz2);
+      if (hyp2 < 0.01) continue;
+      const ux2 = dx2 / hyp2, uz2 = dz2 / hyp2;
+
+      // Cosine of angle between polylines
+      const dot = Math.abs(ux1 * ux2 + uz1 * uz2);
+      if (dot < 0.9659) continue; // angle > 15 degrees
+
+      // Approximate midpoint separation
+      const mid1 = Math.floor(p1.length / 8) * 4;
+      const mid2 = Math.floor(p2.length / 8) * 4;
+      const vx = p2[mid2] - p1[mid1];
+      const vz = p2[mid2 + 2] - p1[mid1 + 2];
+      const dist = Math.hypot(vx, vz);
+      // Data-driven threshold: 7.0m captures Hosur Road elevated corridor (7.3-8.8m) while excluding duplicate OSM ways (<7m)
+      if (dist < 7.0 || dist > 40.0) continue;
+
+      // Left normal of common direction d = (ux1, uz1) is (uz1, -ux1)
+      const side = vx * uz1 - vz * ux1;
+      const leftRoad = side > 0 ? r2 : r1;
+      const rightRoad = side > 0 ? r1 : r2;
+
+      // Reorient both roads to run in direction +d
+      const l_dx = leftRoad.pts[leftRoad.pts.length - 4] - leftRoad.pts[0];
+      const l_dz = leftRoad.pts[leftRoad.pts.length - 2] - leftRoad.pts[2];
+      if (l_dx * ux1 + l_dz * uz1 < 0) {
+        reverseRoadPts(leftRoad);
+      }
+      leftRoad.isOneWay = true;
+      leftRoad.flowDir = +1; // flow in +d (one-way forward)
+
+      const r_dx = rightRoad.pts[rightRoad.pts.length - 4] - rightRoad.pts[0];
+      const r_dz = rightRoad.pts[rightRoad.pts.length - 2] - rightRoad.pts[2];
+      if (r_dx * ux1 + r_dz * uz1 < 0) {
+        reverseRoadPts(rightRoad);
+      }
+      rightRoad.isOneWay = true;
+      rightRoad.flowDir = -1; // flow in -d (one-way reverse)
+    }
+  }
+
+  return result;
 }
 
 function build(message) {
@@ -369,33 +595,32 @@ function build(message) {
     terrain,
     exaggeration,
   );
-  const water = ground?.water || {};
+  const maskBitmap = message.lodOnly
+    ? null
+    : buildMaskTexture(ground, ix, iy);
   const groundMeshes = message.lodOnly
-    ? { terrain: null, water: null, waterLines: null, green: null, roads: null }
+    ? { terrain: null, roads: null }
     : {
       terrain: makeTerrainGeometry(terrain, ix, iy, exaggeration),
-      water: makePolygonGeometry(
-        water.polygons || [], 0.05, "water", terrain, ix, iy, exaggeration,
-      ),
-      waterLines: makeRibbonGeometry(
-        water.lines || [], () => 2.5, 0.05, terrain, ix, iy, exaggeration,
-      ),
-      green: makePolygonGeometry(
-        ground?.green || [], 0.03, "green", terrain, ix, iy, exaggeration,
-      ),
       roads: makeRibbonGeometry(
         ground?.roads || [],
         className => ROAD_WIDTHS[className] || ROAD_WIDTHS.unknown,
-        0.25,
+        0.22,
         terrain,
         ix,
         iy,
         exaggeration,
       ),
     };
+  const majorRoads = message.lodOnly
+    ? null
+    : extractMajorRoads(ground?.roads, terrain, ix, iy);
   return {
     building: packGeometry(building.geometry),
     bounds: building.bounds,
+    verticalExtents: building.verticalExtents,
+    maskBitmap,
+    majorRoads,
     ground: Object.fromEntries(
       Object.entries(groundMeshes).map(([name, geometry]) => [name, packGeometry(geometry)]),
     ),
@@ -407,9 +632,18 @@ self.onmessage = event => {
   try {
     const result = build(event.data);
     const transfer = [result.bounds.buffer];
+    if (result.verticalExtents?.buffer) transfer.push(result.verticalExtents.buffer);
+    if (result.maskBitmap) transfer.push(result.maskBitmap);
+    if (result.majorRoads) {
+      for (const road of result.majorRoads) {
+        if (road.pts?.buffer && !transfer.includes(road.pts.buffer)) {
+          transfer.push(road.pts.buffer);
+        }
+      }
+    }
     for (const item of [result.building, ...Object.values(result.ground)]) {
       if (!item) continue;
-      for (const value of [item.position, item.normal, item.color, item.index]) {
+      for (const value of [item.position, item.normal, item.uv, item.color, item.index]) {
         if (value?.buffer && !transfer.includes(value.buffer)) transfer.push(value.buffer);
       }
       if (item.sphere) item.sphere = Float32Array.from(item.sphere);

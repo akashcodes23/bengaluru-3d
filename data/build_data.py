@@ -35,8 +35,21 @@ ORIGIN_LAT = 12.9716
 METERS_PER_DEGREE_LON = 111_319.49079327358 * math.cos(math.radians(ORIGIN_LAT))
 METERS_PER_DEGREE_LAT = 110_574.0
 CHUNK_SIZE = 1_000
-DEFAULT_BBOX = (77.40, 12.75, 77.85, 13.20)
-FULL_BENGALURU_BBOX = (77.46, 12.83, 77.78, 13.14)
+
+Bounds = Tuple[float, float, float, float]
+CONFIG_PATH = ROOT / "data" / "config.json"
+
+
+def _load_config_bbox() -> Bounds:
+    if CONFIG_PATH.is_file():
+        cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        b = cfg["bbox"]
+        return (float(b["west"]), float(b["south"]), float(b["east"]), float(b["north"]))
+    return (77.40, 12.76, 77.82, 13.28)
+
+
+DEFAULT_BBOX = _load_config_bbox()
+FULL_BENGALURU_BBOX = DEFAULT_BBOX
 CACHE_RETRIES = 3
 CACHE_QUERY_TIMEOUT_SECONDS = 900
 COARSE_CACHE_GRID_SIZE = 2

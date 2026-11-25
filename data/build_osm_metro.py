@@ -12,6 +12,18 @@ import numpy as np
 ROOT = Path(__file__).resolve().parents[1]
 WEB_DATA_DIR = ROOT / "web" / "data"
 CACHE_DIR = ROOT / "data" / "cache"
+CONFIG_PATH = ROOT / "data" / "config.json"
+
+
+def _load_config_bbox() -> Tuple[float, float, float, float]:
+    if CONFIG_PATH.is_file():
+        cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        b = cfg["bbox"]
+        return (float(b["west"]), float(b["south"]), float(b["east"]), float(b["north"]))
+    return (77.40, 12.76, 77.82, 13.28)
+
+
+CONFIG_BBOX = _load_config_bbox()
 
 ORIGIN_LON = 77.5946
 ORIGIN_LAT = 12.9716
@@ -46,8 +58,6 @@ def densify_and_smooth(
     """Smooth track centreline using Chaikin algorithm, strictly bounded to max_dev <= 3.0m of OSM track."""
     if len(pts_local) < 3:
         return pts_local
-    from shapely.geometry import LineString, Point
-
     dense = [pts_local[0]]
     for i in range(len(pts_local) - 1):
         p0 = pts_local[i]
@@ -73,19 +83,34 @@ def densify_and_smooth(
         smoothed.append(current[-1])
         current = smoothed
 
-    orig_line = LineString(pts_local)
+    # Pure Python projection clamping to max_dev <= 3.0m
     result = []
-    for p in current:
-        pt = Point(p)
-        d = orig_line.distance(pt)
-        if d > max_dev:
-            nearest = orig_line.interpolate(orig_line.project(pt))
+    for px, py in current:
+        min_d_sq = float("inf")
+        best_nx, best_ny = px, py
+        for i in range(len(pts_local) - 1):
+            ax, ay = pts_local[i]
+            bx, by = pts_local[i + 1]
+            dx, dy = bx - ax, by - ay
+            seg_len_sq = dx * dx + dy * dy
+            if seg_len_sq < 1e-6:
+                t = 0.0
+            else:
+                t = max(0.0, min(1.0, ((px - ax) * dx + (py - ay) * dy) / seg_len_sq))
+            nx = ax + t * dx
+            ny = ay + t * dy
+            d_sq = (px - nx) ** 2 + (py - ny) ** 2
+            if d_sq < min_d_sq:
+                min_d_sq = d_sq
+                best_nx, best_ny = nx, ny
+        d = math.sqrt(min_d_sq)
+        if d > max_dev and d > 1e-6:
             ratio = max_dev / d
-            nx = nearest.x + (p[0] - nearest.x) * ratio
-            ny = nearest.y + (p[1] - nearest.y) * ratio
-            result.append((nx, ny))
+            clamped_x = best_nx + (px - best_nx) * ratio
+            clamped_y = best_ny + (py - best_ny) * ratio
+            result.append((clamped_x, clamped_y))
         else:
-            result.append(p)
+            result.append((px, py))
     return result
 
 
@@ -146,6 +171,20 @@ def load_terrain_interpolator():
         return float(elev)
 
     return get_elevation
+
+
+# Explicit, sourced mode overrides for OSM ways missing tunnel/bridge/level tags in raw OSM:
+# - Ways 508711042 & 607901267 (Purple Line UG1) are portal ramps connecting the elevated
+#   viaduct (Reach 1, layer 2) to the underground tunnel (UG1, layer -2). They are classified
+#   under the "portal" mode derived from topological connectivity.
+# Note: Way 1189861890 is covered by the tag rule (level=-2 < 0).
+# Green Line ways 142484399 & 607901295 have embankment=yes in OSM representing the surface
+# portal approach ramp at Swastik/Sampige Road, so they are retained as at_grade.
+PORTAL_WAY_OVERRIDES = {
+    508711042: "Purple Line UG1 portal ramp transitioning from elevated viaduct Reach 1 at node 428843502 down to underground tunnel UG1 at node 4979669544",
+    607901267: "Purple Line UG1 portal ramp transitioning from elevated viaduct Reach 1 at node 5760197796 down to underground tunnel UG1 at node 5760197797",
+}
+UNDERGROUND_WAY_OVERRIDES = {}
 
 
 def build_osm_metro():
@@ -224,23 +263,28 @@ def build_osm_metro():
             "depot",
         ):
             continue
+        # Only process actual railway tracks (exclude building polygons, platforms, footways)
+        if railway not in ("subway", "light_rail", "construction", "proposed"):
+            continue
 
-        is_construction = (
-            railway == "construction"
-            or "construction" in tags
-            or tags.get("proposed") is not None
-        )
-
-        # Mode
+        # Mode: strictly tag-based (bridge/viaduct/layer>0 -> elevated, tunnel/layer<0/level<0 -> underground)
+        # plus explicit sourced override list for known underground tunnel segments missing tunnel=yes in OSM.
         tunnel = tags.get("tunnel")
         bridge = tags.get("bridge")
         layer_str = tags.get("layer")
+        level_str = tags.get("level")
         try:
             layer = int(layer_str) if layer_str is not None else 0
         except ValueError:
             layer = 0
+        try:
+            level = int(level_str) if level_str is not None else 0
+        except ValueError:
+            level = 0
 
-        if tunnel == "yes" or layer < 0:
+        if wid in PORTAL_WAY_OVERRIDES:
+            mode = "portal"
+        elif wid in UNDERGROUND_WAY_OVERRIDES or tunnel == "yes" or layer < 0 or level < 0:
             mode = "underground"
         elif bridge in ("yes", "viaduct") or layer > 0:
             mode = "elevated"
@@ -249,20 +293,87 @@ def build_osm_metro():
 
         # Line & Color from relation
         rels = way_rels.get(wid, [])
-        if rels:
-            # Pick first primary relation
-            primary_rel = rels[0]
-            line_ref = primary_rel["ref"]
-            line_name = primary_rel["name"]
-            line_color = primary_rel["color"]
-        else:
-            line_ref = "Metro"
-            line_name = "Namma Metro"
-            line_color = DEFAULT_ACCENT_COLOR
+        line_ref = None
+        for r in rels:
+            ref = r["ref"]
+            if ref in ("Purple", "Green", "Yellow", "Pink", "Blue", "Orange", "Red"):
+                line_ref = ref
+                break
+            r_name = r["name"]
+            for cand in ("Purple", "Green", "Yellow", "Pink", "Blue", "Orange", "Red"):
+                if cand.lower() in r_name.lower():
+                    line_ref = cand
+                    break
+            if line_ref:
+                break
+        if not line_ref:
+            for cand in ("Purple", "Green", "Yellow", "Pink", "Blue", "Orange", "Red"):
+                if cand.lower() in tags.get("name", "").lower():
+                    line_ref = cand
+                    break
+            if not line_ref:
+                line_ref = "Metro"
 
-        # Note: Pink Line elevated section (Kalena Agrahara to Tavarekere) opened Nov 13, 2026.
-        # In OSM, some ways may be tagged railway=subway or railway=construction.
-        # If railway == subway, it is already marked operational.
+        if line_ref == "Purple":
+            line_color = "#e542de"
+            line_name = "Purple Line"
+        elif line_ref == "Green":
+            line_color = "#009933"
+            line_name = "Green Line"
+        elif line_ref == "Yellow":
+            line_color = "#eab308"
+            line_name = "Yellow Line"
+        elif line_ref == "Pink":
+            line_color = "#ec4899"
+            line_name = "Pink Line"
+        elif line_ref == "Blue":
+            line_color = "#3b82f6"
+            line_name = "Blue Line (Airport)"
+        elif line_ref == "Orange":
+            line_color = "#f97316"
+            line_name = "Orange Line"
+        elif line_ref == "Red":
+            line_color = "#ef4444"
+            line_name = "Red Line"
+        else:
+            line_color = DEFAULT_ACCENT_COLOR
+            line_name = "Namma Metro"
+
+        is_construction = (
+            railway in ("construction", "proposed")
+            or "construction" in tags
+            or tags.get("proposed") is not None
+            or any(
+                r["tags"].get("railway") in ("construction", "proposed")
+                or any("construction" in k for k in r["tags"].keys())
+                or r["tags"].get("proposed") is not None
+                or r["tags"].get("state") == "proposed"
+                for r in rels
+            )
+            or line_ref in ("Blue", "Orange", "Red")
+        )
+
+        is_proposed = (
+            railway == "proposed"
+            or tags.get("proposed") is not None
+            or any(
+                r["tags"].get("railway") == "proposed"
+                or r["tags"].get("proposed") is not None
+                or r["tags"].get("state") == "proposed"
+                for r in rels
+            )
+        )
+
+        # Pink Line Phase 2 southern elevated section (Kalena Agrahara to Tavarekere)
+        # opened on 13 Nov 2026. Keep elevated ways in the southern corridor operational.
+        if line_ref == "Pink":
+            mean_lat = sum(pt["lat"] for pt in pts) / len(pts)
+            if mode == "elevated" and (tags.get("start_date") or mean_lat < 12.933):
+                is_construction = False
+                is_proposed = False
+            else:
+                is_construction = True
+                is_proposed = False
 
         # Local coordinates and Chaikin curve smoothing (bounded to <= 3m deviation)
         raw_local = [lonlat_to_local(pt["lon"], pt["lat"]) for pt in pts]
@@ -276,6 +387,11 @@ def build_osm_metro():
                 track_z = ground_z + METRO_VIADUCT_M
             elif mode == "at_grade":
                 track_z = ground_z + METRO_GRADE_OFFSET_M
+            elif mode == "portal":
+                # Portal ramp interpolating from viaduct deck height at viaduct end down to tunnel depth at tunnel end
+                t = i / max(1, len(smoothed_local) - 1)
+                offset = (1.0 - t) * METRO_VIADUCT_M + t * METRO_TUNNEL_DEPTH_M
+                track_z = ground_z + offset
             else:  # underground
                 track_z = ground_z + METRO_TUNNEL_DEPTH_M
 
@@ -303,6 +419,7 @@ def build_osm_metro():
                 "color": line_color,
                 "mode": mode,
                 "is_construction": is_construction,
+                "is_proposed": is_proposed and is_construction,
                 "length_m": round(way_len_m, 1),
                 "points": pts_3d,
             }
@@ -310,14 +427,24 @@ def build_osm_metro():
 
     # 3. Process Stations
     station_nodes_raw = {}
-    # Nodes with station tags
     for nid, node in nodes.items():
         ntags = node.get("tags", {})
+        nm = ntags.get("name", "")
+        # Exclude parking lots and station entrances / elevators
+        if ntags.get("amenity") == "motorcycle_parking" or "parking" in nm.lower():
+            continue
+        if ntags.get("railway") == "subway_entrance" or ntags.get("highway") == "elevator":
+            continue
         if (
             ntags.get("railway") in ("station", "stop")
             or ntags.get("station") == "subway"
             or ntags.get("construction") == "station"
-            or "metro" in ntags.get("name", "").lower()
+            or ntags.get("proposed") == "station"
+            or ntags.get("railway") in ("construction", "proposed")
+            or (
+                ntags.get("public_transport") in ("station", "stop_position")
+                and ntags.get("subway") == "yes"
+            )
         ):
             station_nodes_raw[nid] = node
 
@@ -327,8 +454,23 @@ def build_osm_metro():
         name = node.get("tags", {}).get("name")
         if not name:
             continue
-        # Clean clean name
+        # Clean name
         clean_name = name.replace(" (u/c)", "").replace(" (Proposed)", "").strip()
+        for s in (
+            " (Green Line)",
+            " (Purple Line)",
+            " (Pink Line)",
+            " (Yellow Line)",
+        ):
+            clean_name = clean_name.replace(s, "")
+        if "Hosahalli" in clean_name and "Swamiji" in clean_name:
+            clean_name = "Sri Balagangadharanatha Swamiji Station, Hosahalli"
+        if clean_name in ("Vijayanagara", "Vijayanagar"):
+            clean_name = "Vijayanagar"
+        if "Kempegowda" in clean_name and "Majestic" in clean_name:
+            clean_name = "Nadaprabhu Kempegowda Station, Majestic"
+        if clean_name in ("Krishnarajapura", "Krishnarajapuram"):
+            clean_name = "Krishnarajapura"
         stations_by_name[clean_name].append(node)
 
     stations = []
@@ -343,15 +485,6 @@ def build_osm_metro():
         # Tags and attributes
         tags = node_group[0].get("tags", {})
         raw_name = node_group[0].get("tags", {}).get("name", clean_name)
-
-        # Construction status
-        is_construction = any(
-            "(u/c)" in n.get("tags", {}).get("name", "")
-            or "(Proposed)" in n.get("tags", {}).get("name", "")
-            or n.get("tags", {}).get("construction") is not None
-            or n.get("tags", {}).get("railway") == "proposed"
-            for n in node_group
-        )
 
         # Check line affiliation by finding nearest track
         best_dist = float("inf")
@@ -368,6 +501,21 @@ def build_osm_metro():
                     best_color = tr["color"]
                     best_mode = tr["mode"]
 
+        # An interchange or existing station is operational if at least one node is operational
+        has_operational_node = any(
+            n.get("tags", {}).get("railway") in ("station", "stop")
+            and n.get("tags", {}).get("construction") is None
+            and n.get("tags", {}).get("proposed") is None
+            and "(u/c)" not in n.get("tags", {}).get("name", "")
+            and "(Proposed)" not in n.get("tags", {}).get("name", "")
+            and n.get("tags", {}).get("railway") not in ("proposed", "construction")
+            for n in node_group
+        )
+
+        is_construction = not has_operational_node
+        if best_line in ("Blue", "Orange", "Red") and not has_operational_node:
+            is_construction = True
+
         # Known underground stations verification
         if clean_name in (
             "Nadaprabhu Kempegowda Station, Majestic",
@@ -377,6 +525,38 @@ def build_osm_metro():
             "Krantivira Sangolli Rayanna Railway Station",
             "Chickpete",
             "Krishna Rajendra Market",
+        ):
+            best_mode = "underground"
+
+        # Baiyappanahalli is at-grade
+        if clean_name == "Baiyappanahalli":
+            best_mode = "at_grade"
+
+        # Pink Line Phase 2 elevated section check (opened 13 Nov 2026):
+        # Kalena Agrahara, Hulimavu, Bilekahalli IIM-B, N S Palya (JP Nagar 4th Phase),
+        # Jayadeva Hospital (Interchange), Suddaguntepalya (Tavarekere)
+        if clean_name in (
+            "Kalena Agrahara",
+            "Hulimavu",
+            "IIMB",
+            "Bilekahalli",
+            "Bilekahalli IIM-B",
+            "JP Nagar 4th Phase",
+            "N S Palya",
+            "Jayadeva Interchange",
+            "Jayadeva Hospital",
+            "Jayadeva Hospital (Pink Line)",
+            "Tavarekere",
+            "Suddaguntepalya",
+        ):
+            best_mode = "elevated"
+            if clean_name not in ("Jayadeva Hospital", "Jayadeva Interchange"):
+                best_line = "Pink"
+                best_color = "#ec4899"
+            is_construction = False
+
+        # Pink Line Phase 2 underground section (under construction):
+        if clean_name in (
             "Dairy Circle",
             "Lakkasandra",
             "Langford Town",
@@ -390,25 +570,14 @@ def build_osm_metro():
             "Nagawara",
         ):
             best_mode = "underground"
+            is_construction = True
 
-        # Pink Line Phase 2 elevated section check:
-        # Kalena Agrahara, Hulimavu, IIMB, JP Nagar 4th Phase, Jayadeva Hospital / Interchange, Tavarekere
-        # opened on 13 Nov 2026.
-        if clean_name in (
-            "Kalena Agrahara",
-            "Hulimavu",
-            "IIMB",
-            "Bilekahalli",
-            "JP Nagar 4th Phase",
-            "Jayadeva Interchange",
-            "Jayadeva Hospital",
-            "Tavarekere",
-        ):
-            best_mode = "elevated"
-            best_line = "Pink" if clean_name != "Jayadeva Hospital" else best_line
-            best_color = "#ec4899" if clean_name != "Jayadeva Hospital" else best_color
-            # These 6/7 stations are operational since 13 Nov 2026!
-            is_construction = False
+        is_proposed = is_construction and any(
+            "(Proposed)" in n.get("tags", {}).get("name", "")
+            or n.get("tags", {}).get("proposed") is not None
+            or n.get("tags", {}).get("railway") == "proposed"
+            for n in node_group
+        )
 
         if best_mode == "underground":
             stn_z = ground_z + METRO_TUNNEL_DEPTH_M
@@ -434,6 +603,7 @@ def build_osm_metro():
                 "color": best_color,
                 "mode": best_mode,
                 "is_construction": is_construction,
+                "is_proposed": is_proposed,
             }
         )
 
@@ -458,19 +628,29 @@ def build_osm_metro():
     for line, km in sorted(operational_km_by_line.items()):
         print(f"  Line {line}: {km:.2f} track-km (~{km/2:.2f} route-km)")
 
-    print("\n--- UNDER CONSTRUCTION STATS (Track-km) ---")
+    print("\n--- UNDER CONSTRUCTION / PLANNED STATS (Track-km) ---")
     for mode, km in sorted(construction_km_by_mode.items()):
         print(f"  {mode}: {km:.2f} track-km (~{km/2:.2f} route-km)")
-    print(f"Total Under Construction: {total_con_track_km:.2f} km")
+    print(f"Total Under Construction / Planned: {total_con_track_km:.2f} km")
+
+    op_tracks = [t for t in tracks if not t["is_construction"]]
+    con_only_tracks = [t for t in tracks if t["is_construction"] and not t.get("is_proposed")]
+    prop_tracks = [t for t in tracks if t.get("is_proposed")]
+    print(f"\n--- TRACK WAYS BY STATE ---")
+    print(f"Operational Ways: {len(op_tracks)}")
+    print(f"Under Construction Ways: {len(con_only_tracks)}")
+    print(f"Proposed / Planned Ways: {len(prop_tracks)}")
 
     op_stations = [s for s in stations if not s["is_construction"]]
-    con_stations = [s for s in stations if s["is_construction"]]
-    print(f"\n--- STATIONS ---")
+    con_only_stations = [s for s in stations if s["is_construction"] and not s.get("is_proposed")]
+    prop_stations = [s for s in stations if s.get("is_proposed")]
+    print(f"\n--- STATIONS BY STATE ---")
     print(f"Total Deduplicated Stations: {len(stations)}")
     print(
         f"Operational Stations: {len(op_stations)} (Elevated: {station_modes['elevated']}, Underground: {station_modes['underground']}, Grade: {station_modes['at_grade']})"
     )
-    print(f"Under Construction Stations: {len(con_stations)}")
+    print(f"Under Construction Stations: {len(con_only_stations)}")
+    print(f"Proposed / Planned Stations: {len(prop_stations)}")
 
     payload = {
         "metadata": {

@@ -244,12 +244,23 @@
   {
     "name": "Kempegowda International Airport (Terminal 1)",
     "category": "airport",
-    "lat": 13.1979,
-    "lon": 77.7063,
+    "lat": 13.200515,
+    "lon": 77.710041,
     "height_m": null,
     "source_url": null,
     "verified": false,
     "coordinate_source_url": "https://en.wikipedia.org/wiki/Kempegowda_International_Airport",
-    "note": "Terminal 1 coordinates from Wikipedia / OpenStreetMap. Northern boundary of metropolitan region; no verified building height recorded."
+    "note": "Terminal 1 footprint from Overture / OSM (91,180 m\u00b2). Northern boundary of metropolitan region; no verified building height recorded."
+  },
+  {
+    "name": "Kempegowda International Airport (Terminal 2)",
+    "category": "airport",
+    "lat": 13.19935,
+    "lon": 77.71856,
+    "height_m": null,
+    "source_url": null,
+    "verified": false,
+    "coordinate_source_url": "https://en.wikipedia.org/wiki/Kempegowda_International_Airport",
+    "note": "Terminal 2 footprint from Overture / OSM (106,580 m²). Stylised procedural model height ~25 m is an estimate with no source, not a survey-verified height."
   }
 ]

@@ -14,6 +14,18 @@ from shapely.ops import linemerge, unary_union
 ROOT = Path(__file__).resolve().parents[1]
 WEB_DATA_DIR = ROOT / "web" / "data"
 CACHE_DIR = ROOT / "data" / "cache"
+CONFIG_PATH = ROOT / "data" / "config.json"
+
+
+def _load_config_bbox() -> Tuple[float, float, float, float]:
+    if CONFIG_PATH.is_file():
+        cfg = json.loads(CONFIG_PATH.read_text(encoding="utf-8"))
+        b = cfg["bbox"]
+        return (float(b["west"]), float(b["south"]), float(b["east"]), float(b["north"]))
+    return (77.40, 12.76, 77.82, 13.28)
+
+
+CONFIG_BBOX = _load_config_bbox()
 
 ORIGIN_LON = 77.5946
 ORIGIN_LAT = 12.9716

@@ -50,6 +50,12 @@ lat,lon,tagged_height_m,name,reason,raster_value_m,floors_height_m,final_height_
 12.980194,77.563363,130.0,,kept unverified: tag >= 80 m with raster < 40 m,11.3,118.4,130.0,6
 12.978720,77.563571,82.0,Block B,kept unverified: tag >= 80 m with raster < 40 m,10.7,83.2,82.0,6
 12.978681,77.563063,82.0,Block A,kept unverified: tag >= 80 m with raster < 40 m,10.7,83.2,82.0,6
+13.165540,77.561990,95.7,,kept unverified: tag >= 80 m with raster < 40 m,2.5,99.2,95.7,6
+13.165806,77.562499,95.7,,kept unverified: tag >= 80 m with raster < 40 m,2.8,99.2,95.7,6
+13.165767,77.561156,95.7,,kept unverified: tag >= 80 m with raster < 40 m,2.5,99.2,95.7,6
+13.165208,77.561075,95.7,,kept unverified: tag >= 80 m with raster < 40 m,2.5,99.2,95.7,6
+13.165734,77.563008,95.7,,kept unverified: tag >= 80 m with raster < 40 m,2.7,99.2,95.7,6
+13.165297,77.563687,95.7,,kept unverified: tag >= 80 m with raster < 40 m,2.5,99.2,95.7,6
 12.982785,77.567247,118.0,,kept unverified: tag >= 80 m with raster < 40 m,10.6,115.2,118.0,6
 12.990103,77.570613,130.0,,kept unverified: tag >= 80 m with raster < 40 m,13.1,121.6,130.0,6
 12.990510,77.571272,124.0,,kept unverified: tag >= 80 m with raster < 40 m,17.5,99.2,124.0,6
@@ -139,6 +145,21 @@ lat,lon,tagged_height_m,name,reason,raster_value_m,floors_height_m,final_height_
 13.055258,77.676081,130.0,Tower 2,kept unverified: tag >= 80 m with raster < 40 m,2.5,118.4,130.0,6
 13.054817,77.676058,130.0,Tower 1,kept unverified: tag >= 80 m with raster < 40 m,2.5,118.4,130.0,6
 13.056091,77.676137,130.0,Tower 4,kept unverified: tag >= 80 m with raster < 40 m,2.5,118.4,130.0,6
+13.142903,77.675516,118.8,Tower 1,at least 5 buildings within 300 m share tagged height 118.8 m,2.5,118.4,3.0,5
+13.142056,77.675858,118.8,Tower 3,at least 5 buildings within 300 m share tagged height 118.8 m,2.5,118.4,3.0,5
+13.142555,77.675773,118.8,Tower 2,at least 5 buildings within 300 m share tagged height 118.8 m,2.5,118.4,3.0,5
+13.141697,77.675316,118.8,Tower 4,at least 5 buildings within 300 m share tagged height 118.8 m,2.5,118.4,3.0,5
+13.141506,77.674832,118.8,Tower 5,at least 5 buildings within 300 m share tagged height 118.8 m,2.5,118.4,3.0,5
+13.141689,77.674423,118.8,Tower 6,at least 5 buildings within 300 m share tagged height 118.8 m,2.5,118.4,3.0,5
+13.141876,77.673975,118.8,Tower 7,at least 5 buildings within 300 m share tagged height 118.8 m,2.5,118.4,3.0,5
+13.141688,77.673548,118.8,Tower 8,at least 5 buildings within 300 m share tagged height 118.8 m,2.5,118.4,3.0,5
+13.142812,77.673308,118.8,Tower 11,at least 5 buildings within 300 m share tagged height 118.8 m,2.5,118.4,3.0,5
+13.142396,77.673192,118.8,Tower 10,at least 5 buildings within 300 m share tagged height 118.8 m,2.5,118.4,3.0,5
+13.141873,77.673150,118.8,Tower 9,at least 5 buildings within 300 m share tagged height 118.8 m,2.5,118.4,3.0,5
+13.146727,77.674666,85.7,,kept unverified: tag >= 80 m with raster < 40 m,2.5,92.8,85.7,6
+13.146598,77.676299,85.7,,kept unverified: tag >= 80 m with raster < 40 m,2.5,92.8,85.7,6
+13.148018,77.675508,85.7,,kept unverified: tag >= 80 m with raster < 40 m,2.5,92.8,85.7,6
+13.147809,77.677042,85.7,,kept unverified: tag >= 80 m with raster < 40 m,2.5,92.8,85.7,6
 12.840240,77.684028,108.0,Tower A,kept unverified: tag >= 80 m with raster < 40 m,9.1,105.6,108.0,6
 12.840433,77.683382,108.0,Tower B,kept unverified: tag >= 80 m with raster < 40 m,9.5,105.6,108.0,6
 12.840587,77.682727,108.0,Tower C,kept unverified: tag >= 80 m with raster < 40 m,10.1,105.6,108.0,6
@@ -171,6 +192,13 @@ lat,lon,tagged_height_m,name,reason,raster_value_m,floors_height_m,final_height_
 12.924329,77.731187,98.2,Block 6,kept unverified: tag >= 80 m with raster < 40 m,2.6,102.4,98.2,6
 12.931669,77.731780,93.9,Tower 2,kept unverified: tag >= 80 m with raster < 40 m,3.2,96.0,93.9,6
 12.930404,77.732319,93.9,Tower 1,kept unverified: tag >= 80 m with raster < 40 m,2.6,96.0,93.9,6
+12.792667,77.741412,126.0,Wing 1,at least 5 buildings within 300 m share tagged height 126.0 m,4.8,134.4,4.8,5
+12.792778,77.741109,126.0,Wing 2,at least 5 buildings within 300 m share tagged height 126.0 m,5.0,134.4,5.0,5
+12.793773,77.741064,126.0,Wing 5,at least 5 buildings within 300 m share tagged height 126.0 m,3.7,134.4,3.7,5
+12.793471,77.740972,126.0,Wing 4,at least 5 buildings within 300 m share tagged height 126.0 m,4.3,134.4,4.3,5
+12.793214,77.740897,126.0,Wing 3,at least 5 buildings within 300 m share tagged height 126.0 m,4.3,134.4,4.3,5
+12.794046,77.741145,126.0,Wing 6,at least 5 buildings within 300 m share tagged height 126.0 m,3.7,134.4,3.7,5
+12.794264,77.741577,126.0,Wing 7,at least 5 buildings within 300 m share tagged height 126.0 m,3.4,134.4,3.4,5
 12.875771,77.741320,104.1,Tower 15,at least 5 buildings within 300 m share tagged height 104.1 m,2.5,112.0,3.0,5
 12.875791,77.740991,104.1,Tower 14,at least 5 buildings within 300 m share tagged height 104.1 m,,112.0,10.9,5
 12.876747,77.740059,104.1,Tower 5,at least 5 buildings within 300 m share tagged height 104.1 m,,112.0,12.9,5
@@ -239,6 +267,17 @@ lat,lon,tagged_height_m,name,reason,raster_value_m,floors_height_m,final_height_
 13.073341,77.739800,185.8,Tower 2,tag > 165 m not in landmarks.json,2.5,188.8,3.0,5
 13.074250,77.739346,185.8,Tower 1,tag > 165 m not in landmarks.json,2.5,188.8,3.0,5
 13.073432,77.739090,185.8,Tower 3,tag > 165 m not in landmarks.json,2.5,188.8,3.0,5
+12.794306,77.745335,139.9,Wing 3,kept unverified: tag >= 80 m with raster < 40 m,2.5,144.0,139.9,6
+12.794358,77.746255,145.0,Tower 1,at least 5 buildings within 300 m share tagged height 145.0 m,2.5,144.0,3.0,5
+12.794243,77.746733,145.0,Tower 2,at least 5 buildings within 300 m share tagged height 145.0 m,2.5,144.0,3.0,5
+12.792359,77.747108,145.0,Tower 6,at least 5 buildings within 300 m share tagged height 145.0 m,2.9,144.0,3.0,5
+12.792958,77.746753,145.0,Tower 5,at least 5 buildings within 300 m share tagged height 145.0 m,2.5,144.0,3.0,5
+12.793314,77.746848,145.0,Tower 4,at least 5 buildings within 300 m share tagged height 145.0 m,2.5,144.0,3.0,5
+12.793670,77.746942,145.0,Tower 3,at least 5 buildings within 300 m share tagged height 145.0 m,2.5,144.0,3.0,5
+12.792000,77.747013,145.0,Tower 7,at least 5 buildings within 300 m share tagged height 145.0 m,2.9,144.0,3.0,5
+12.793744,77.745158,139.9,Wing 4 and Wing 5,kept unverified: tag >= 80 m with raster < 40 m,2.6,144.0,139.9,6
+12.793541,77.744545,141.9,Wing 6,kept unverified: tag >= 80 m with raster < 40 m,2.8,144.0,141.9,6
+12.794703,77.744810,139.9,Wing 1 and Wing 2,kept unverified: tag >= 80 m with raster < 40 m,2.5,144.0,139.9,6
 12.874962,77.745394,116.0,Tower 16,kept unverified: tag >= 80 m with raster < 40 m,2.5,102.4,116.0,6
 12.874133,77.743929,110.2,Tower 17,at least 5 buildings within 300 m share tagged height 110.2 m,2.5,121.6,3.0,5
 12.873829,77.743471,110.2,Tower 18,at least 5 buildings within 300 m share tagged height 110.2 m,2.5,121.6,3.0,5

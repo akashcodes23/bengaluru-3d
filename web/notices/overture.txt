@@ -1,0 +1,34 @@
+Attribution and Licensing
+
+If you are the author of a publication or research report that uses Overture data, you may choose to add the following citation, including the date the data were accessed: Overture Maps Foundation, overturemaps.org.
+
+Some of the data sources we use in Overture datasets require their own attribution, according to their licenses. For example, our Explore tool displays several datasets that are made wholly or in part from OpenStreetMap data, so we added the following line of attribution to adhere to the requirements of the Open Database License: © OpenStreetMap contributors, Overture Maps Foundation.
+
+Base
+License for theme: ODbL
+
+© OpenStreetMap contributors. Available under the Open Database License.
+Data from the Daylight Map Distribution
+ESA WorldCover. © ESA WorldCover project 2020 / Contains modified Copernicus Sentinel data (2020) processed by ESA WorldCover consortium. Available under CC BY 4.0 DEED.
+Data products from ETOPO1. Available under Open Data Commons Public Domain Dedication and License.
+Data from GLOBathy. Available under CC0 1.0 (assumed).
+
+Buildings
+License for theme: ODbL
+
+© OpenStreetMap contributors. Available under the Open Database License.
+Esri Community Maps contributors. Available under CC BY 4.0.
+Global ML Building Footprints. Licensed by Microsoft under the Open Database License.
+Google Open Buildings. Available under CC BY 4.0.
+USGS 3D Elevation Program Digital Elevation Program.
+Qian Shi, et al. A First High-quality Vector Data of Buildings in East Asian Countries Based on a Comprehensive Large-scale Mapping Framework. Zenodo, 22 July 2023, doi:10.5281/zenodo.8174931. Available under CC BY 4.0.
+Work derived from BTN 2024 ign.es. Available under CC BY 4.0
+Contains information licensed under the Open Government Licence – Vancouver from the City of Vancouver, BC, Canada.
+
+Transportation
+License for theme: ODbL
+
+© OpenStreetMap contributors. Available under the Open Database License.
+Data from TomTom.
+
+Source: https://docs.overturemaps.org/attribution/ (accessed 2026-11-24)

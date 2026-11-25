@@ -4,7 +4,11 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#111720">
-    <link rel="icon" href="data:,">
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="apple-touch-icon" href="favicon.svg">
+    <meta property="og:title" content="Bengaluru 3D — Built from open map data">
+    <meta property="og:description" content="Interactive 3D city model of Bengaluru built from open map data.">
+    <meta property="og:image" content="logo-lockup.svg">
     <title>Bengaluru 3D — Built from open map data</title>
     <style>
       :root {
@@ -20,23 +24,26 @@
       #scene { position: fixed; inset: 0; }
       canvas { display: block; width: 100%; height: 100%; }
       .topbar {
-        position: fixed; z-index: 2; top: 28px; left: 32px;
-        display: flex; align-items: center; gap: 12px; pointer-events: none;
-        background: radial-gradient(circle at left, rgba(16, 22, 30, 0.8) 0%, rgba(16, 22, 30, 0) 100%);
-        padding: 6px 16px 6px 6px; border-radius: 14px;
+        position: fixed; z-index: 2; top: 24px; left: 24px;
+        display: flex; align-items: center; pointer-events: auto;
       }
-      .mark {
-        width: 38px; height: 38px; display: grid; place-items: center;
-        border: 1px solid #49515d; border-radius: 12px; color: #ffc879;
-        font-size: 19px; background: #1b222caa;
+      .brand-banner {
+        display: block;
+        height: 58px;
+        width: auto;
+        border-radius: 9px;
+        border: 1px solid #ffffff18;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+        transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+        cursor: pointer;
       }
-      .eyebrow {
-        color: #94a3b8; font-size: 10px; letter-spacing: .16em; text-transform: uppercase;
-        text-shadow: 0 2px 8px rgba(0,0,0,0.9), 0 0 2px rgba(0,0,0,0.8);
+      .brand-banner:hover {
+        transform: translateY(-1px) scale(1.015);
+        border-color: #ffffff30;
+        box-shadow: 0 14px 36px rgba(0, 0, 0, 0.75);
       }
-      h1 {
-        margin: 3px 0 0; font-size: 17px; font-weight: 550; letter-spacing: -.025em;
-        text-shadow: 0 2px 10px rgba(0,0,0,0.95), 0 0 3px rgba(0,0,0,0.8);
+      .brand-banner:active {
+        transform: translateY(0) scale(0.99);
       }
       .panel {
         position: fixed; z-index: 2; top: 28px; right: 28px; width: min(320px, calc(100vw - 32px));
@@ -56,6 +63,12 @@
         background: #171e28; color: #e8edf2; font: inherit; font-size: 11px;
       }
       .range-scale { display: flex; justify-content: space-between; color: #71808e; font-size: 10px; }
+      .date-input {
+        padding: 3px 6px; border: 1px solid #ffffff20; border-radius: 7px;
+        background: #171e28; color: #e8edf2; font: inherit; font-size: 11px;
+        color-scheme: dark; cursor: pointer; outline: none;
+      }
+      .date-input:focus { border-color: #ffc87966; }
       .stats { display: flex; justify-content: space-between; gap: 12px; color: #84909e; font-size: 11px; }
       .stats strong { color: #dce3e9; font-weight: 500; font-variant-numeric: tabular-nums; text-align: right; }
       .toggle-row { display: flex; align-items: center; gap: 8px; font-size: 12px; cursor: pointer; }
@@ -107,7 +120,15 @@
         transition: opacity 0.6s ease, visibility 0.6s ease;
       }
       #loading-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
-      .loading-logo { font-size: 36px; }
+      .loading-logo {
+        width: 64px; height: 64px; display: block;
+        filter: drop-shadow(0 6px 20px rgba(0, 0, 0, 0.6));
+        animation: logo-pulse 2s ease-in-out infinite alternate;
+      }
+      @keyframes logo-pulse {
+        0% { transform: translateY(0); filter: drop-shadow(0 6px 16px rgba(0,0,0,0.6)); }
+        100% { transform: translateY(-4px); filter: drop-shadow(0 10px 24px rgba(245, 185, 74, 0.35)); }
+      }
       .loading-title { font-size: 22px; font-weight: 650; letter-spacing: -.03em; }
       .loading-sub { color: #94a3b8; font-size: 12px; letter-spacing: .05em; text-transform: uppercase; }
       .loading-bar-wrap {
@@ -169,6 +190,7 @@
       @media (max-width: 650px) {
         body { overflow: auto; }
         .topbar { top: 16px; left: 16px; }
+        .brand-banner { height: 42px; }
         .footer-credit { display: none; }
         .panel {
           top: auto; right: 10px; bottom: 48px; left: 10px; width: auto;
@@ -190,7 +212,7 @@
   <body>
     <div id="scene" aria-label="Interactive 3D city model"></div>
     <div id="loading-overlay" role="status" aria-label="Loading">
-      <div class="loading-logo" aria-hidden="true">⌁</div>
+      <img class="loading-logo" src="logo-mark.svg" alt="Bengaluru 3D Logo" width="64" height="64">
       <div class="loading-title">Bengaluru <span class="accent">3D</span></div>
       <div class="loading-sub">Built from open map data</div>
       <div class="loading-bar-wrap"><div class="loading-bar" id="loading-bar"></div></div>
@@ -198,11 +220,8 @@
       <div class="loading-hint">Drag to orbit &nbsp;·&nbsp; Scroll to zoom &nbsp;·&nbsp; Right-drag to pan</div>
     </div>
     <header class="topbar">
-      <div class="mark" aria-hidden="true">⌁</div>
-      <div>
-        <div class="eyebrow">Built from open map data</div>
-        <h1>Bengaluru <span class="accent">3D</span></h1>
-      </div>
+      <h1 style="position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0;">Bengaluru 3D — Built from open map data</h1>
+      <img class="brand-banner" src="logo-lockup.svg" alt="Bengaluru 3D — Built from open map data" height="52" id="brand-banner" title="Bengaluru 3D · Click to reset view">
     </header>
     <div id="metro-tooltip">
       <div id="metro-tooltip-name"></div>
@@ -212,7 +231,7 @@
       <div class="inspect-header">
         <div>
           <span class="inspect-badge" id="inspect-badge">Building</span>
-          <span class="inspect-badge" id="inspect-corroborated-badge" style="display: none; margin-left: 4px; background: #a855f722; color: #c084fc; border: 1px solid #a855f766;">Corroborated</span>
+          <span class="inspect-badge" id="inspect-unverified-badge" style="display: none; margin-left: 4px; background: #a855f722; color: #c084fc; border: 1px solid #a855f766;">OSM tag, unverified</span>
           <span class="inspect-badge" id="inspect-uncertain-badge" style="display: none; margin-left: 4px; background: #f59e0b22; color: #f59e0b; border: 1px solid #f59e0b66;">Uncertain Height</span>
           <h3 class="inspect-title" id="inspect-name">Unnamed Building</h3>
         </div>
@@ -259,6 +278,9 @@
       <div id="inspect-tag-notice" style="display: none; margin-top: 8px; padding: 6px 8px; border-radius: 6px; background: #f28e5b22; border: 1px solid #f28e5b66; font-size: 10px; color: #f28e5b; line-height: 1.4;">
         <strong>Rejected Tag:</strong> <span id="inspect-tag-reason">—</span>
       </div>
+      <div id="inspect-hero-notice" style="display: none; margin-top: 8px; padding: 6px 8px; border-radius: 6px; background: #38bdf822; border: 1px solid #38bdf866; font-size: 10px; color: #38bdf8; line-height: 1.4;">
+        <strong>Hero Landmark:</strong> Stylised model, not survey geometry
+      </div>
       <div id="inspect-landmark-link" class="inspect-link" style="display: none;">
         <a id="inspect-link-anchor" href="#" target="_blank" rel="noopener">
           <span>Verified Source</span> <span>↗</span>
@@ -270,6 +292,10 @@
       <p class="hint">Drag to orbit, scroll to zoom, and right-drag to pan. Click any building to inspect details.</p>
       <div class="rule"></div>
       <div class="range-heading">
+        <label for="date-picker">Date</label>
+        <input id="date-picker" type="date" class="date-input" value="2026-11-24" aria-label="Date">
+      </div>
+      <div class="range-heading" style="margin-top: 10px;">
         <label for="time">Time of day</label>
         <span class="range-value" id="time-label">17:30</span>
       </div>
@@ -280,6 +306,10 @@
         <button type="button" class="preset-btn active" id="preset-golden">Golden</button>
         <button type="button" class="preset-btn" id="preset-night">Night</button>
       </div>
+      <div id="sun-status" style="margin-top: 6px; font-size: 10px; color: #94a3b8; display: flex; justify-content: space-between;">
+        <span>Sun elev: <strong id="sun-elev-val" style="color: #cbd5e1;">+3.9°</strong></span>
+        <span>Azimuth: <strong id="sun-azim-val" style="color: #cbd5e1;">292° (WNW)</strong></span>
+      </div>
       <div class="rule"></div>
       <div class="range-heading">
         <label for="radius">Quality radius</label>
@@ -288,6 +318,12 @@
           <option value="4">4 km</option>
           <option value="6">6 km</option>
         </select>
+      </div>
+      <div style="margin-top: 8px;">
+        <label class="toggle-row" for="shadows-toggle">
+          <input id="shadows-toggle" type="checkbox">
+          <span>Building shadows</span>
+        </label>
       </div>
       <div class="rule"></div>
       <div class="range-heading">
@@ -312,7 +348,7 @@
         <span><i class="source-swatch" style="background:#ffc54a"></i>Raster</span>
         <span><i class="source-swatch" style="background:#eb7676"></i>Guess</span>
         <span><i class="source-swatch" style="background:#ff6cf0"></i>Verified</span>
-        <span><i class="source-swatch" style="background:#a855f7"></i>Corroborated</span>
+        <span><i class="source-swatch" style="background:#a855f7"></i>OSM tag, unverified</span>
         <span><i class="source-swatch" style="background:#f28e5b"></i>Tag rejected</span>
       </div>
       <div class="rule"></div>
@@ -328,7 +364,7 @@
           </label>
           <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; color: #cbd5e1;">
             <input id="metro-construction-toggle" type="checkbox">
-            <span>Under construction</span>
+            <span>Under construction / planned</span>
           </label>
         </div>
         <div id="metro-legend" style="margin-top: 4px; font-size: 10px; color: #94a3b8; display: flex; flex-direction: column; gap: 4px;">
@@ -339,8 +375,37 @@
             <span style="display:flex; align-items:center; gap:4px;"><i class="source-swatch" style="background:#ec4899;"></i>Pink</span>
             <span style="display:flex; align-items:center; gap:4px;"><i class="source-swatch" style="background:#3b82f6;"></i>Blue (u/c)</span>
           </div>
+          <div style="display: flex; flex-wrap: wrap; gap: 6px 10px; margin-top: 2px;">
+            <span style="display:flex; align-items:center; gap:4px;"><i class="source-swatch" style="background:#f59e0b;"></i>Under construction (dashed)</span>
+            <span style="display:flex; align-items:center; gap:4px;"><i class="source-swatch" style="background:#fef08a;"></i>Planned (light dashed)</span>
+          </div>
           <span style="display:flex; align-items:center; gap:5px; margin-top: 2px;"><i class="source-swatch" style="background:#94a3b8;"></i> 8m viaduct deck assumption</span>
           <span style="color:#38bdf8; font-style: italic;">Metro trains: illustrative, not live</span>
+        </div>
+      </div>
+      <div class="rule"></div>
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <label class="toggle-row" for="traffic-toggle" style="margin: 0;">
+          <input id="traffic-toggle" type="checkbox" checked>
+          <span>Road traffic</span>
+        </label>
+        <span id="traffic-count-badge" style="font-size: 10px; color: #94a3b8; font-variant-numeric: tabular-nums;">0 vehicles</span>
+      </div>
+      <div id="traffic-controls" style="margin-top: 6px; display: flex; flex-direction: column; gap: 6px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <label for="traffic-density" style="font-size: 11px; color: #cbd5e1;">Density</label>
+          <select id="traffic-density" class="quality-select" style="padding: 2px 6px; font-size: 11px;" aria-label="Traffic density">
+            <option value="off">Off</option>
+            <option value="low" selected>Low</option>
+            <option value="med">Medium</option>
+          </select>
+        </div>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 11px;">
+          <label style="display: flex; align-items: center; gap: 5px; cursor: pointer; color: #cbd5e1;">
+            <input id="traffic-day-toggle" type="checkbox">
+            <span>Show by day</span>
+          </label>
+          <span style="color: #38bdf8; font-style: italic; font-size: 10px;">Traffic: illustrative, not live</span>
         </div>
       </div>
       <div class="rule"></div>
@@ -351,7 +416,7 @@
     <div id="status" role="status">Loading city data…</div>
     <div id="landmark-label" role="status"></div>
     <footer class="footer-credit">
-      <span>Map data: © OpenStreetMap contributors (ODbL) · Overture Maps Foundation · GHSL (JRC) · Copernicus DEM (ESA)</span>
+      <span>© OpenStreetMap contributors · Overture · GHSL · Copernicus DEM · </span>
       <button id="about-open-btn" class="about-btn" type="button">About & Data Sources</button>
     </footer>
 
@@ -359,22 +424,34 @@
     <div id="about-modal" style="display: none; position: fixed; inset: 0; z-index: 200; background: rgba(0,0,0,0.75); backdrop-filter: blur(8px); align-items: center; justify-content: center;">
       <div style="position: relative; max-width: 560px; width: 92%; max-height: 85vh; overflow-y: auto; background: #171e28; border: 1px solid #ffffff24; border-radius: 16px; padding: 24px; color: #cbd5e1; font-size: 12px; line-height: 1.6; box-shadow: 0 20px 50px rgba(0,0,0,0.85);">
         <button id="about-close" style="position: absolute; top: 16px; right: 16px; background: none; border: none; color: #94a3b8; font-size: 18px; cursor: pointer;">✕</button>
+        <img src="logo-lockup.svg" alt="Bengaluru 3D" style="display: block; width: min(280px, 75%); height: auto; margin-bottom: 16px; border-radius: 8px;">
         <h2 style="margin: 0 0 10px; font-size: 18px; color: #f8fafc; font-weight: 650;">Bengaluru 3D — Data Sources & Attribution</h2>
         <p style="margin-bottom: 14px; color: #94a3b8;">Built from open map data. This project fuses open geospatial datasets into an interactive 3D WebGL viewer of Bengaluru.</p>
         
         <h3 style="font-size: 13px; color: #f1f5f9; margin: 14px 0 6px;">Data Sources & Attribution</h3>
         <ul style="padding-left: 18px; margin: 0 0 14px; display: flex; flex-direction: column; gap: 8px;">
-          <li><strong>OpenStreetMap:</strong> OpenStreetMap contributors (ODbL). Transit routes, track alignment, stations, and street centrelines.</li>
-          <li><strong>Overture Maps:</strong> Overture Maps Foundation release 2026-10-21.0 (ODbL / CDLA Permissive 2.0). 3D building polygons and transportation base.</li>
-          <li><strong>GHSL (JRC):</strong> European Commission JRC Global Human Settlement Layer GHS-BUILT-H 2018 raster (CC BY 4.0).</li>
-          <li><strong>Copernicus DEM:</strong> Copernicus GLO-30 Digital Elevation Model (European Union / ESA). 30 m elevation raster.</li>
+          <li><strong>OpenStreetMap:</strong> <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color: #38bdf8;">© OpenStreetMap contributors</a> (ODbL). Transit routes, track alignment, stations, and street centrelines.</li>
+          <li>
+            <strong>Overture Maps:</strong> Overture Maps Foundation release 2026-10-21.0 (ODbL / CDLA Permissive 2.0). 3D building polygons and transportation base.
+            <div style="margin-top: 4px;"><strong style="font-size: 11px; color: #94a3b8;">Full notice:</strong><pre id="overture-notice-box" style="max-height: 140px; overflow-y: auto; background: #0f172a; padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.4; white-space: pre-wrap; font-family: monospace; border: 1px solid #334155; margin-top: 4px; color: #e2e8f0;">Loading notice…</pre></div>
+          </li>
+          <li><strong>GHSL:</strong> European Commission JRC, GHS-BUILT-H R2023A, CC BY 4.0. Neighbourhood-level average built-up height raster.</li>
+          <li>
+            <strong>Copernicus DEM:</strong> Copernicus GLO-30 Digital Elevation Model. 30 m elevation raster.
+            <div style="margin-top: 4px;"><strong style="font-size: 11px; color: #94a3b8;">Full notice:</strong><pre id="copernicus-notice-box" style="max-height: 140px; overflow-y: auto; background: #0f172a; padding: 10px; border-radius: 6px; font-size: 11px; line-height: 1.4; white-space: pre-wrap; font-family: monospace; border: 1px solid #334155; margin-top: 4px; color: #e2e8f0;">Loading notice…</pre></div>
+          </li>
           <li><strong>Rendering:</strong> Three.js 3D WebGL library.</li>
         </ul>
 
         <h3 style="font-size: 13px; color: #f1f5f9; margin: 14px 0 6px;">Methodology & Disclaimers</h3>
-        <p style="margin: 0 0 8px;">• <strong>GHSL Epoch (2018) & Corroboration:</strong> The GHSL raster reflects the 2018 epoch (~90 m cells). For newer high-rises constructed after 2018, height tags that agree within 20% of their floor-count estimate (floors × 3.2 m, both ≥ 80 m) are preserved and marked as <em>Corroborated by Floors</em>. Tall tags without floor corroboration remain flagged with an <em>Uncertain Height</em> warning badge.</p>
-        <p style="margin: 0 0 8px;">• <strong>Namma Metro Network:</strong> Viaduct guideways use a standard assumed clearance of 8m (METRO_VIADUCT_M = 8.0) above DEM terrain. The Pink Line elevated section (Kalena Agrahara to Tavarekere, 6 stations, with Jayadeva as a two-level interchange) opened on 13 Nov 2026 and is included as operational. Metro trains are illustrative, not live.</p>
-        <p style="margin: 0;">• <strong>Verified Landmarks:</strong> Only named public landmarks (such as Vidhana Soudha, World Trade Center, Chinnaswamy Stadium) use ground-truth verified heights.</p>
+        <p style="margin: 0 0 8px;">• <strong>Solar Position & Atmosphere:</strong> Sun elevation, azimuth, colour temperature, sky gradient, and directional shadows are calculated from an analytical NOAA solar model for Bengaluru (lat 12.9716, lon 77.5946, IST UTC+5:30) using the selected date and time. Directional shadows are rendered for chunks within a 2 km quality radius of the camera target.</p>
+        <p style="margin: 0 0 8px;">• <strong>Procedural Window Lighting:</strong> Window illumination and facade glow at night are procedural shader patterns; they do not represent real-time building occupancy or sensor data.</p>
+        <p style="margin: 0 0 8px;">• <strong>Illustrative Road Traffic:</strong> Vehicle streams along motorway, trunk, and primary roads are animated procedurally on the GPU as moving light points. India left-hand drive is modelled with white headlights in forward travel and red taillights in reverse travel. Pairs of major road polylines running parallel within 7 m to 40 m (angle &lt; 15°) are detected as divided carriageways and rendered as one-way streams (left carriageway forward with white headlights, right carriageway reverse with red taillights) using a geometric inference, not tagged data. Parallel pairs under 7 m (stacked flyovers or duplicate centrelines) and unpaired segments stay two-way (offset 1.8 m to the left of travel). Polylines crossing chunk boundaries are paired within each 1 km chunk independently. Elevated flyovers are not modelled; vehicle lights follow terrain-draped road geometry. Speeds and densities are illustrative and do not reflect live traffic or sensor telemetry.</p>
+        <p style="margin: 0 0 8px;">• <strong>Building Heights & Raster:</strong> Heights come from OSM/Overture tags where present, otherwise from a 2018 GHSL raster of about 90 m cells (an average, so tall towers are underestimated). Tags above 165 m (not verified landmarks), or 5+ identical tags of 100 m or more within 300 m, are replaced by the raster value (228 buildings). Tall tags with a low raster value are shown as "OSM tag, unverified" (232 buildings). Buildings with no raster value use an area-based guess (4,994 buildings).</p>
+        <p style="margin: 0 0 8px;">• <strong>Namma Metro Network:</strong> 102.79 one-way route km operational (Purple 43.48 km, Green 33.86 km, Yellow 18.05 km, Pink 7.40 km); 88 unique physical operational stations in OSM (80 elevated, 7 underground, 1 at grade), 91 when interchange stations are counted once per line. The difference from the public reference of 91 stations is not resolved. Metro trains are illustrative, not live.</p>
+        <p style="margin: 0 0 8px;">• <strong>Procedural Hero Landmarks:</strong> Prominent landmarks (Vidhana Soudha, UB City complex, and Kempegowda International Airport Terminal 2) feature procedural 3D models built upon real Overture/OSM footprint geometry. Stylised model, not survey geometry. Vidhana Soudha (46 m) and UB Tower (123 m) reflect verified heights. Other towers in the UB City complex use estimated heights (unverified). Kempegowda Terminal 2 (25 m) is an unverified procedural estimate with no source survey.</p>
+        <p style="margin: 0 0 8px;">• <strong>Assumptions:</strong> Blue, Orange, and Red lines forced to construction; Pink elevated section with start_date 2026-11-14 treated as operational; Pink tunnels treated as construction; viaduct deck height METRO_VIADUCT_M = 8.0 m; underground tunnel depth METRO_TUNNEL_DEPTH_M = -12.0 m (an assumed engineering depth); airport runway width AIRPORT_RUNWAY_WIDTH_M = 45.0 m unless an OSM width tag exists. Two Phase 1 portal ramp ways (Purple Line UG1: 508711042, 607901267) join the elevated viaduct at MG Road / Reach 1 (layer 2) to the underground tunnel at Cubbon Park / UG1 (layer -2); they are classified under portal mode derived from connectivity, rendered as a descending ramp interpolating from viaduct deck height (+8.0 m) down to the assumed tunnel depth (-12.0 m, grade ~11.7%), hidden in default view, with the above-ground portion (+8m to 0m) rendered in default view so the viaduct deck transitions smoothly into terrain. Way 1189861890 is classified via level &lt; 0 tag rule. Green Line portal approach ways 142484399 and 607901295 carry embankment=yes and are retained as surface/at-grade approach tracks.</p>
+        <p style="margin: 0;">• <strong>Verified Landmarks:</strong> Only landmarks with a sourced height are verified: Vidhana Soudha, UB City (UB Tower), and World Trade Center Bangalore.</p>
       </div>
     </div>
 
@@ -382,8 +459,10 @@
       import * as THREE from "three";
       window.THREE = THREE;
       import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+      import { HeroLandmarksManager } from "./hero-landmarks.js";
 
-      const APP_VERSION = "20261122.1";
+      const DATA_VERSION = "20261124.8";
+      const APP_VERSION = DATA_VERSION;
       const ORIGIN_LON = 77.5946;
       const ORIGIN_LAT = 12.9716;
       const METERS_PER_DEGREE_LON = 111319.49079327358 * Math.cos(ORIGIN_LAT * Math.PI / 180);
@@ -398,6 +477,10 @@
       const renderStatsElement = document.querySelector("#render-stats");
       const timeSlider = document.querySelector("#time");
       const timeLabel = document.querySelector("#time-label");
+      const datePicker = document.querySelector("#date-picker");
+      const shadowsToggle = document.querySelector("#shadows-toggle");
+      const sunElevVal = document.querySelector("#sun-elev-val");
+      const sunAzimVal = document.querySelector("#sun-azim-val");
       const radiusSlider = document.querySelector("#radius");
       const verticalExaggerationSlider = document.querySelector("#vertical-exaggeration");
       const verticalExaggerationLabel = document.querySelector("#vertical-exaggeration-label");
@@ -408,6 +491,40 @@
       radiusSlider.value = String(initialRadius);
       let verticalExaggeration = Number(verticalExaggerationSlider.value);
       const heightSourceToggle = document.querySelector("#height-source");
+
+      // Default date to today in IST
+      const nowUtc = new Date();
+      const istTime = new Date(nowUtc.getTime() + (330 + nowUtc.getTimezoneOffset()) * 60000);
+      const defaultDateStr = istTime.toISOString().slice(0, 10);
+      if (datePicker) datePicker.value = defaultDateStr;
+
+      // Shadows: default on at Quality radius 2 km, off beyond that
+      const shadowsHash = new URLSearchParams(location.hash.slice(1)).get("shadows");
+      let shadowsEnabled = shadowsHash !== null
+        ? shadowsHash === "1"
+        : initialRadius <= 2;
+      if (shadowsToggle) shadowsToggle.checked = shadowsEnabled;
+
+      // Traffic controls and initial state
+      const trafficToggle = document.querySelector("#traffic-toggle");
+      const trafficDensitySelect = document.querySelector("#traffic-density");
+      const trafficDayToggle = document.querySelector("#traffic-day-toggle");
+      const trafficCountBadge = document.querySelector("#traffic-count-badge");
+
+      const trafficHash = new URLSearchParams(location.hash.slice(1)).get("traffic");
+      const trafficDayHash = new URLSearchParams(location.hash.slice(1)).get("trafficday");
+      let trafficEnabled = trafficHash ? trafficHash.toLowerCase() !== "off" : true;
+      let trafficDensity = (trafficHash && ["off", "low", "med", "medium"].includes(trafficHash.toLowerCase()))
+        ? (trafficHash.toLowerCase() === "medium" ? "med" : trafficHash.toLowerCase())
+        : (trafficEnabled ? "low" : "off");
+      if (trafficDensity === "off") trafficEnabled = false;
+      let trafficDayEnabled = trafficDayHash === "1";
+
+      if (trafficToggle) trafficToggle.checked = trafficEnabled;
+      if (trafficDensitySelect) trafficDensitySelect.value = trafficDensity;
+      if (trafficDayToggle) trafficDayToggle.checked = trafficDayEnabled;
+
+      let totalTrafficVehicles = 0;
 
       // Loading overlay
       const loadingOverlay = document.querySelector("#loading-overlay");
@@ -435,6 +552,7 @@
       const landmarkLabelElement = document.querySelector("#landmark-label");
       const scene = new THREE.Scene();
       scene.background = new THREE.Color("#10161e");
+      scene.fog = new THREE.Fog("#10161e", 8000, 35000);
 
       const camera = new THREE.PerspectiveCamera(42, innerWidth / innerHeight, 0.1, 100000);
       const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
@@ -442,33 +560,103 @@
       renderer.setSize(innerWidth, innerHeight);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
       renderer.toneMappingExposure = 1.15;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       sceneElement.appendChild(renderer.domElement);
+
+      const glContext = renderer.getContext();
+      const pointSizeRange = glContext ? glContext.getParameter(glContext.ALIASED_POINT_SIZE_RANGE) : [1, 64];
+      console.log("ALIASED_POINT_SIZE_RANGE:", pointSizeRange);
 
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.target.set(0, 0, 0);
       controls.enableDamping = true;
       controls.dampingFactor = 0.06;
       controls.maxPolarAngle = Math.PI * 0.49;
-
-      scene.add(new THREE.HemisphereLight("#b5c5df", "#283039", 1.45));
-      const moon = new THREE.DirectionalLight("#f4c98c", 1.8);
-      moon.position.set(-3500, 6000, 2500);
-      scene.add(moon);
-
-      const groundMaterial = new THREE.MeshStandardMaterial({ color: "#2d3748", roughness: 0.94 });
-      const terrainMaterial = new THREE.MeshStandardMaterial({
-        color: "#2d3748", roughness: 0.97, side: THREE.DoubleSide,
+      controls.addEventListener("start", () => {
+        controls.autoRotate = false;
       });
+
+      const heroLandmarksManager = new HeroLandmarksManager(scene);
+      window.heroLandmarksManager = heroLandmarksManager;
+      heroLandmarksManager.init();
+
+      const hemiLight = new THREE.HemisphereLight("#b5c5df", "#283039", 1.45);
+      scene.add(hemiLight);
+
+      const sunLight = new THREE.DirectionalLight("#f4c98c", 1.8);
+      sunLight.castShadow = true;
+      sunLight.shadow.mapSize.width = 2048;
+      sunLight.shadow.mapSize.height = 2048;
+      sunLight.shadow.camera.near = 500;
+      sunLight.shadow.camera.far = 18000;
+      const shadowExtent = 2200;
+      sunLight.shadow.camera.left = -shadowExtent;
+      sunLight.shadow.camera.right = shadowExtent;
+      sunLight.shadow.camera.top = shadowExtent;
+      sunLight.shadow.camera.bottom = -shadowExtent;
+      sunLight.shadow.bias = -0.0003;
+      sunLight.shadow.normalBias = 0.05;
+
+      const sunLightTarget = new THREE.Object3D();
+      scene.add(sunLightTarget);
+      sunLight.target = sunLightTarget;
+      scene.add(sunLight);
+      const moon = sunLight; // alias for backwards compatibility
+      window.renderer = renderer;
+      window.scene = scene;
+      window.sunLight = sunLight;
+      window.camera = camera;
+      window.controls = controls;
+
+      // Star field (fades in when sun is below -6° elevation)
+      const starGeometry = new THREE.BufferGeometry();
+      const starCount = 2000;
+      const starPositions = new Float32Array(starCount * 3);
+      const starColors = new Float32Array(starCount * 3);
+      for (let i = 0; i < starCount; i++) {
+        const theta = 2 * Math.PI * Math.random();
+        const phi = Math.acos(Math.random() * 0.95 + 0.05);
+        const r = 40000;
+        starPositions[i * 3] = r * Math.sin(phi) * Math.cos(theta);
+        starPositions[i * 3 + 1] = r * Math.cos(phi);
+        starPositions[i * 3 + 2] = r * Math.sin(phi) * Math.sin(theta);
+        const tint = Math.random();
+        if (tint > 0.8) {
+          starColors[i * 3] = 0.85; starColors[i * 3 + 1] = 0.92; starColors[i * 3 + 2] = 1.0;
+        } else if (tint > 0.6) {
+          starColors[i * 3] = 1.0; starColors[i * 3 + 1] = 0.95; starColors[i * 3 + 2] = 0.85;
+        } else {
+          starColors[i * 3] = 0.95; starColors[i * 3 + 1] = 0.95; starColors[i * 3 + 2] = 0.95;
+        }
+      }
+      starGeometry.setAttribute("position", new THREE.BufferAttribute(starPositions, 3));
+      starGeometry.setAttribute("color", new THREE.BufferAttribute(starColors, 3));
+      const starMaterial = new THREE.PointsMaterial({
+        size: 3.0,
+        vertexColors: true,
+        transparent: true,
+        opacity: 0.0,
+        depthWrite: false,
+        sizeAttenuation: false,
+      });
+      const starField = new THREE.Points(starGeometry, starMaterial);
+      scene.add(starField);
+
+      const groundMaterial = new THREE.MeshStandardMaterial({ color: "#475569", roughness: 0.94 });
       const ground = new THREE.Mesh(new THREE.PlaneGeometry(1000, 1000), groundMaterial);
       ground.rotation.x = -Math.PI / 2;
       ground.position.y = -2;
+      ground.receiveShadow = shadowsEnabled;
       scene.add(ground);
+      window.ground = ground;
 
       let nightLevel = 0;
       let heightSourceDebug = false;
       let windowShader;
       const buildingMaterial = new THREE.MeshStandardMaterial({
         color: "#8794a0", roughness: 0.78, metalness: 0.08, vertexColors: true,
+        shadowSide: THREE.FrontSide,
       });
       const buildingSourceColors = [
         new THREE.Color("#4fc4a2"),
@@ -518,13 +706,6 @@
         windowShader = shader;
       };
 
-      const waterMaterial = new THREE.MeshStandardMaterial({
-        color: "#0284c7", roughness: 0.25, metalness: 0.1, side: THREE.DoubleSide,
-      });
-      const greenMaterial = new THREE.MeshStandardMaterial({
-        color: "#22c55e", roughness: 0.92, side: THREE.DoubleSide,
-      });
-      const waterLineMaterial = new THREE.MeshBasicMaterial({ color: "#0284c7" });
       const roadMaterial = new THREE.MeshStandardMaterial({
         color: "#f1f5f9", roughness: 0.8, metalness: 0.05, side: THREE.DoubleSide,
         polygonOffset: true, polygonOffsetFactor: -2.0, polygonOffsetUnits: -4.0,
@@ -533,17 +714,696 @@
       const groundGroup = new THREE.Group();
       const terrainGroup = new THREE.Group();
       const selectionGroup = new THREE.Group();
-      scene.add(terrainGroup, buildingGroup, groundGroup, selectionGroup);
+      const trafficGroup = new THREE.Group();
+      scene.add(terrainGroup, buildingGroup, groundGroup, selectionGroup, trafficGroup);
 
-      const dayTerrain = new THREE.Color("#2d3748");
-      const nightTerrain = new THREE.Color("#111827");
-      const dayGreen = new THREE.Color("#22c55e");
-      const nightGreen = new THREE.Color("#14381e");
-      const dayWater = new THREE.Color("#0284c7");
-      const nightWater = new THREE.Color("#0b3252");
+      window.roadMaterial = roadMaterial;
+      window.scene = scene;
+      window.camera = camera;
+      window.controls = controls;
+      window.terrainGroup = terrainGroup;
+      window.buildingGroup = buildingGroup;
+      window.groundGroup = groundGroup;
+      window.selectionGroup = selectionGroup;
+      window.trafficGroup = trafficGroup;
+
+      // Road Traffic Simulation (GPU-instanced Points)
+      const MAX_TOTAL_TRAFFIC = 20000;
+      let isTrafficCapped = false;
+      window.MAX_TOTAL_TRAFFIC = MAX_TOTAL_TRAFFIC;
+
+      const trafficUniforms = {
+        uTime: { value: 0.0 },
+        uFocusPos: { value: new THREE.Vector3() },
+        uSunElevation: { value: 56.5 },
+        uTrafficDay: { value: trafficDayEnabled ? 1.0 : 0.0 },
+        uTrafficEnabled: { value: trafficEnabled && trafficDensity !== "off" ? 1.0 : 0.0 },
+        uExaggeration: { value: verticalExaggeration },
+        uMinPointSize: { value: pointSizeRange ? pointSizeRange[0] : 1.0 },
+        uMaxPointSize: { value: pointSizeRange ? pointSizeRange[1] : 64.0 },
+      };
+      window.trafficUniforms = trafficUniforms;
+
+      if (trafficUniforms.uMaxPointSize.value < 8.0) {
+        console.warn("ALIASED_POINT_SIZE_RANGE max < 8 (" + trafficUniforms.uMaxPointSize.value + "), applying fallback point size");
+      }
+
+      const TRAFFIC_VERTEX_SHADER = `
+        uniform sampler2D uRoadTexture;
+        uniform float uTextureWidth;
+        uniform float uTime;
+        uniform vec3 uFocusPos;
+        uniform float uTrafficDay;
+        uniform float uSunElevation;
+        uniform float uTrafficEnabled;
+        uniform float uExaggeration;
+        uniform float uMinPointSize;
+        uniform float uMaxPointSize;
+
+        attribute vec4 aRoadSpan;    // x: startIndex, y: numVertices, z: totalLength, w: speed
+        attribute vec4 aTrafficParam; // x: phase, y: laneOffset, z: isReverse, w: ptSize
+
+        varying vec3 vColor;
+        varying float vAlpha;
+
+        void main() {
+          if (uTrafficEnabled < 0.5) {
+            gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+            gl_PointSize = 0.0;
+            vAlpha = 0.0;
+            return;
+          }
+
+          float startIndex = aRoadSpan.x;
+          int numVertices = int(aRoadSpan.y);
+          float totalLength = aRoadSpan.z;
+          float speed = aRoadSpan.w;
+
+          float phase = aTrafficParam.x;
+          float isReverse = aTrafficParam.z;
+          float ptSize = aTrafficParam.w;
+
+          // Modulo loop along segment length
+          float s = mod(phase + speed * uTime, totalLength);
+          if (isReverse > 0.5) {
+            s = totalLength - s;
+          }
+
+          // Find the segment leg [pA, pB] containing cumulative distance s
+          vec4 pA = texture2D(uRoadTexture, vec2((startIndex + 0.5) / uTextureWidth, 0.5));
+          vec4 pB = pA;
+
+          for (int i = 0; i < 64; i++) {
+            if (i >= numVertices - 1) break;
+            float nextIdx = startIndex + float(i + 1);
+            vec4 nextP = texture2D(uRoadTexture, vec2((nextIdx + 0.5) / uTextureWidth, 0.5));
+            if (s <= nextP.w || i == numVertices - 2) {
+              pB = nextP;
+              break;
+            }
+            pA = nextP;
+          }
+
+          float legLen = pB.w - pA.w;
+          float t = legLen > 0.01 ? clamp((s - pA.w) / legLen, 0.0, 1.0) : 0.0;
+          vec3 pos = mix(pA.xyz, pB.xyz, t);
+          pos.y = pos.y * uExaggeration + 0.22 + 0.5;
+
+          // Compute horizontal tangent along road
+          vec3 tangent = pB.xyz - pA.xyz;
+          tangent.y = 0.0;
+          float tLen = length(tangent);
+          vec3 leftNormal = vec3(0.0);
+          if (tLen > 0.001) {
+            tangent /= tLen;
+            // Left of travel direction in India:
+            // Forward (moving pA -> pB): travel direction = +tangent, left = (tangent.z, 0, -tangent.x)
+            // Reverse (moving pB -> pA): travel direction = -tangent, left = (-tangent.z, 0, tangent.x)
+            if (isReverse > 0.5) {
+              leftNormal = vec3(-tangent.z, 0.0, tangent.x);
+            } else {
+              leftNormal = vec3(tangent.z, 0.0, -tangent.x);
+            }
+          }
+
+          // India drives on the LEFT: offset by laneOffset in leftNormal direction
+          pos += leftNormal * abs(aTrafficParam.y);
+
+          // Fade near segment ends so wrap-around is invisible (12m fade window)
+          float endFade = smoothstep(0.0, 12.0, s) * (1.0 - smoothstep(totalLength - 12.0, totalLength, s));
+
+          // Distance from camera focus point (fade out between 2.0 km and 2.5 km)
+          float distToFocus = length(pos.xz - uFocusPos.xz);
+          float distFade = 1.0 - smoothstep(2000.0, 2500.0, distToFocus);
+
+          // Sun elevation / time-of-day visibility (dusk and night, elevation < 4°)
+          float nightVisibility = 1.0 - smoothstep(-2.0, 4.0, uSunElevation);
+          float timeAlpha = uTrafficDay > 0.5 ? max(nightVisibility, 0.22) : nightVisibility;
+
+          float finalAlpha = endFade * distFade * timeAlpha;
+          if (finalAlpha <= 0.001) {
+            gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+            gl_PointSize = 0.0;
+            vAlpha = 0.0;
+            return;
+          }
+
+          vec4 mvPosition = modelViewMatrix * vec4(pos, 1.0);
+          gl_Position = projectionMatrix * mvPosition;
+
+          // Distance point size attenuation clamped to hardware range [uMinPointSize, uMaxPointSize]
+          float depth = -mvPosition.z;
+          float rawPtSize = ptSize * (350.0 / max(depth, 1.0));
+          if (isReverse > 0.5) {
+            rawPtSize *= 1.3;
+            vColor = vec3(1.0, 0.05, 0.02); // Saturated red tail lights
+          } else {
+            vColor = vec3(1.0, 0.96, 0.85); // White headlights
+          }
+          gl_PointSize = clamp(rawPtSize, max(1.0, uMinPointSize), min(28.0, uMaxPointSize));
+          vAlpha = finalAlpha;
+        }
+      `;
+
+      const TRAFFIC_FRAGMENT_SHADER = `
+        varying vec3 vColor;
+        varying float vAlpha;
+
+        void main() {
+          if (vAlpha <= 0.001) discard;
+
+          vec2 coord = gl_PointCoord - vec2(0.5);
+          float distSq = dot(coord, coord);
+          if (distSq > 0.25) discard;
+
+          float dist = sqrt(distSq) * 2.0;
+          float intensity = (1.0 - dist * dist) * (1.0 - dist);
+
+          gl_FragColor = vec4(vColor * intensity, vAlpha * intensity);
+        }
+      `;
+
+      function pseudoRandom(seed) {
+        let t = (seed += 0x6D2B79F5);
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      }
+
+      function buildChunkTraffic(state) {
+        if (!trafficEnabled || trafficDensity === "off") return;
+        if (!state.majorRoads || state.majorRoads.length === 0) return;
+        if (totalTrafficVehicles >= MAX_TOTAL_TRAFFIC) {
+          isTrafficCapped = true;
+          return;
+        }
+
+        const majorRoads = state.majorRoads;
+        let totalVertices = 0;
+        for (const road of majorRoads) {
+          totalVertices += road.pts.length / 4;
+        }
+        if (totalVertices === 0) return;
+
+        const texData = new Float32Array(totalVertices * 4);
+        let texOffset = 0;
+        const roadMeta = [];
+
+        for (let rIdx = 0; rIdx < majorRoads.length; rIdx++) {
+          const road = majorRoads[rIdx];
+          const numPts = road.pts.length / 4;
+          const startIndex = texOffset / 4;
+          texData.set(road.pts, texOffset);
+          texOffset += road.pts.length;
+
+          roadMeta.push({
+            startIndex,
+            numVertices: numPts,
+            totalLength: road.totalLength,
+            roadClass: road.class,
+            isOneWay: !!road.isOneWay,
+            flowDir: road.flowDir || 0,
+          });
+        }
+
+        const roadTexture = new THREE.DataTexture(texData, totalVertices, 1, THREE.RGBAFormat, THREE.FloatType);
+        roadTexture.minFilter = THREE.NearestFilter;
+        roadTexture.magFilter = THREE.NearestFilter;
+        roadTexture.needsUpdate = true;
+
+        const isMed = trafficDensity === "med";
+        const spacingByClass = {
+          motorway: isMed ? 10 : 40,
+          trunk: isMed ? 12 : 50,
+          primary: isMed ? 15 : 60,
+        };
+        const baseSpeedByClass = {
+          motorway: 22.0,
+          trunk: 16.0,
+          primary: 11.0,
+        };
+
+        const roadSpanData = [];
+        const trafficParamData = [];
+
+        let seed = ((state.chunk.ix & 0xFFFF) << 16) | (state.chunk.iy & 0xFFFF);
+        const ptBase = trafficUniforms.uMaxPointSize.value < 8.0 ? 6.0 : 28.0;
+
+        for (let rIdx = 0; rIdx < roadMeta.length; rIdx++) {
+          if (totalTrafficVehicles + (roadSpanData.length / 4) >= MAX_TOTAL_TRAFFIC) {
+            isTrafficCapped = true;
+            break;
+          }
+          const meta = roadMeta[rIdx];
+          const totalLen = meta.totalLength;
+          if (totalLen < 15.0) continue;
+
+          const spacing = spacingByClass[meta.roadClass] || 50;
+          const baseSpeed = baseSpeedByClass[meta.roadClass] || 15.0;
+          const numVehicles = Math.max(1, Math.floor(totalLen / spacing));
+
+          if (meta.isOneWay) {
+            // Divided-carriageway one-way stream
+            // flowDir +1: left carriageway forward (+d), white headlights, offset +1.0m
+            // flowDir -1: right carriageway reverse (-d), red taillights, offset -1.0m
+            const isRev = meta.flowDir < 0 ? 1.0 : 0.0;
+            const lateralOffset = 1.0;
+            for (let i = 0; i < numVehicles; i++) {
+              if (totalTrafficVehicles + (roadSpanData.length / 4) >= MAX_TOTAL_TRAFFIC) {
+                isTrafficCapped = true;
+                break;
+              }
+              const phase = (i / numVehicles) * totalLen;
+              seed = (seed + 1) | 0;
+              const speedJitter = baseSpeed * (0.92 + pseudoRandom(seed) * 0.16);
+              seed = (seed + 1) | 0;
+              const ptSize = ptBase + pseudoRandom(seed) * 8.0;
+
+              roadSpanData.push(meta.startIndex, meta.numVertices, totalLen, speedJitter);
+              trafficParamData.push(phase, lateralOffset, isRev, ptSize);
+            }
+          } else {
+            // Unpaired major road: two-way dual streams
+            // Forward stream (white headlights, left of travel: +1.8m)
+            for (let i = 0; i < numVehicles; i++) {
+              if (totalTrafficVehicles + (roadSpanData.length / 4) >= MAX_TOTAL_TRAFFIC) {
+                isTrafficCapped = true;
+                break;
+              }
+              const phase = (i / numVehicles) * totalLen;
+              seed = (seed + 1) | 0;
+              const speedJitter = baseSpeed * (0.92 + pseudoRandom(seed) * 0.16);
+              seed = (seed + 1) | 0;
+              const ptSize = ptBase + pseudoRandom(seed) * 8.0;
+
+              roadSpanData.push(meta.startIndex, meta.numVertices, totalLen, speedJitter);
+              trafficParamData.push(phase, 1.8, 0.0, ptSize);
+            }
+
+            // Reverse stream (red taillights, left of travel: -1.8m relative to forward)
+            for (let i = 0; i < numVehicles; i++) {
+              if (totalTrafficVehicles + (roadSpanData.length / 4) >= MAX_TOTAL_TRAFFIC) {
+                isTrafficCapped = true;
+                break;
+              }
+              const phase = ((i + 0.5) / numVehicles) * totalLen;
+              seed = (seed + 1) | 0;
+              const speedJitter = baseSpeed * (0.92 + pseudoRandom(seed) * 0.16);
+              seed = (seed + 1) | 0;
+              const ptSize = ptBase + pseudoRandom(seed) * 8.0;
+
+              roadSpanData.push(meta.startIndex, meta.numVertices, totalLen, speedJitter);
+              trafficParamData.push(phase, -1.8, 1.0, ptSize);
+            }
+          }
+        }
+
+        const vehicleCount = roadSpanData.length / 4;
+        if (vehicleCount === 0) {
+          roadTexture.dispose();
+          return;
+        }
+
+        const geometry = new THREE.BufferGeometry();
+        const dummyPositions = new Float32Array(vehicleCount * 3);
+        geometry.setAttribute("position", new THREE.BufferAttribute(dummyPositions, 3));
+        geometry.setAttribute("aRoadSpan", new THREE.BufferAttribute(new Float32Array(roadSpanData), 4));
+        geometry.setAttribute("aTrafficParam", new THREE.BufferAttribute(new Float32Array(trafficParamData), 4));
+
+        const cx = (state.chunk.ix + 0.5) * CHUNK_SIZE;
+        const cz = -(state.chunk.iy + 0.5) * CHUNK_SIZE;
+        geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(cx, 0, cz), CHUNK_SIZE * 1.5);
+
+        const material = new THREE.ShaderMaterial({
+          uniforms: {
+            uTime: trafficUniforms.uTime,
+            uFocusPos: trafficUniforms.uFocusPos,
+            uSunElevation: trafficUniforms.uSunElevation,
+            uTrafficDay: trafficUniforms.uTrafficDay,
+            uTrafficEnabled: trafficUniforms.uTrafficEnabled,
+            uExaggeration: trafficUniforms.uExaggeration,
+            uMinPointSize: trafficUniforms.uMinPointSize,
+            uMaxPointSize: trafficUniforms.uMaxPointSize,
+            uRoadTexture: { value: roadTexture },
+            uTextureWidth: { value: totalVertices },
+          },
+          vertexShader: TRAFFIC_VERTEX_SHADER,
+          fragmentShader: TRAFFIC_FRAGMENT_SHADER,
+          transparent: true,
+          blending: THREE.AdditiveBlending,
+          depthWrite: false,
+        });
+
+        const mesh = new THREE.Points(geometry, material);
+        mesh.frustumCulled = false;
+        state.trafficMesh = mesh;
+        state.trafficCount = vehicleCount;
+        totalTrafficVehicles += vehicleCount;
+        if (totalTrafficVehicles >= MAX_TOTAL_TRAFFIC) {
+          totalTrafficVehicles = MAX_TOTAL_TRAFFIC;
+          isTrafficCapped = true;
+        }
+        trafficGroup.add(mesh);
+      }
+
+      function updateTrafficSettings() {
+        isTrafficCapped = false;
+        trafficEnabled = trafficToggle ? trafficToggle.checked : true;
+        trafficDensity = trafficDensitySelect ? trafficDensitySelect.value : "low";
+        if (trafficDensity === "off") trafficEnabled = false;
+
+        if (!trafficEnabled || trafficDensity === "off") {
+          trafficGroup.visible = false;
+          trafficUniforms.uTrafficEnabled.value = 0.0;
+          for (const state of loadedChunks.values()) {
+            if (state.trafficMesh) {
+              trafficGroup.remove(state.trafficMesh);
+              if (state.trafficMesh.geometry) state.trafficMesh.geometry.dispose();
+              if (state.trafficMesh.material) {
+                if (state.trafficMesh.material.uniforms?.uRoadTexture?.value) {
+                  state.trafficMesh.material.uniforms.uRoadTexture.value.dispose();
+                }
+                state.trafficMesh.material.dispose();
+              }
+              state.trafficMesh = null;
+              state.trafficCount = 0;
+            }
+          }
+          totalTrafficVehicles = 0;
+        } else {
+          trafficGroup.visible = true;
+          trafficUniforms.uTrafficEnabled.value = 1.0;
+          totalTrafficVehicles = 0;
+          for (const state of loadedChunks.values()) {
+            if (state.trafficMesh) {
+              trafficGroup.remove(state.trafficMesh);
+              if (state.trafficMesh.geometry) state.trafficMesh.geometry.dispose();
+              if (state.trafficMesh.material) {
+                if (state.trafficMesh.material.uniforms?.uRoadTexture?.value) {
+                  state.trafficMesh.material.uniforms.uRoadTexture.value.dispose();
+                }
+                state.trafficMesh.material.dispose();
+              }
+              state.trafficMesh = null;
+              state.trafficCount = 0;
+            }
+            if (state.majorRoads && state.majorRoads.length > 0) {
+              buildChunkTraffic(state);
+            }
+          }
+        }
+        rebalanceTraffic();
+        updateHud();
+        scheduleHashUpdate();
+      }
+
+      function rebalanceTraffic() {
+        if (!trafficEnabled || trafficDensity === "off") return;
+        const target = controls.target;
+        // Sort all loaded chunks with major roads by horizontal distance to camera target (closest first)
+        const entries = Array.from(loadedChunks.values())
+          .filter(s => s.majorRoads && s.majorRoads.length > 0)
+          .map(s => {
+            const cx = (s.chunk.ix + 0.5) * CHUNK_SIZE;
+            const cz = -(s.chunk.iy + 0.5) * CHUNK_SIZE;
+            return { state: s, dist: Math.hypot(cx - target.x, cz - target.z), key: chunkKey(s.chunk) };
+          })
+          .sort((a, b) => a.dist - b.dist);
+
+        let sumVehicles = 0;
+        let capReached = false;
+        const cappedChunks = [];
+
+        for (const entry of entries) {
+          const s = entry.state;
+          if (!capReached && sumVehicles < MAX_TOTAL_TRAFFIC) {
+            if (!s.trafficMesh) {
+              buildChunkTraffic(s);
+            }
+            sumVehicles += s.trafficCount || 0;
+            if (sumVehicles >= MAX_TOTAL_TRAFFIC) {
+              capReached = true;
+            }
+          } else {
+            // Chunks farthest from camera lose traffic first when capped
+            if (s.trafficMesh) {
+              trafficGroup.remove(s.trafficMesh);
+              if (s.trafficMesh.geometry) s.trafficMesh.geometry.dispose();
+              if (s.trafficMesh.material) {
+                if (s.trafficMesh.material.uniforms?.uRoadTexture?.value) {
+                  s.trafficMesh.material.uniforms.uRoadTexture.value.dispose();
+                }
+                s.trafficMesh.material.dispose();
+              }
+              s.trafficMesh = null;
+              totalTrafficVehicles -= (s.trafficCount || 0);
+              s.trafficCount = 0;
+            }
+            cappedChunks.push({ key: entry.key, dist: Math.round(entry.dist) });
+          }
+        }
+        totalTrafficVehicles = Math.min(sumVehicles, MAX_TOTAL_TRAFFIC);
+        isTrafficCapped = capReached || (totalTrafficVehicles >= MAX_TOTAL_TRAFFIC);
+        window.trafficCappedChunks = cappedChunks;
+        updateHud();
+      }
+      window.rebalanceTraffic = rebalanceTraffic;
+
+      const dayTerrain = new THREE.Color("#475569");
+      const nightTerrain = new THREE.Color("#18202b");
+      const dayGreen = new THREE.Color("#385e3e");
+      const nightGreen = new THREE.Color("#15271a");
+      const dayWater = new THREE.Color("#1c5d8a");
+      const nightWater = new THREE.Color("#0c2438");
       const dayRoad = new THREE.Color("#f1f5f9");
-      const nightRoad = new THREE.Color("#fed7aa");
-      const nightRoadEmissive = new THREE.Color("#f59e0b");
+      const nightRoad = new THREE.Color("#334155"); // Slate dark road at night so traffic light points stand out clearly
+      const nightRoadEmissive = new THREE.Color("#1e293b"); // Subtle dark slate emissive (replaces bright amber)
+
+      const sharedTerrainUniforms = {
+        uGroundColor: { value: new THREE.Color("#475569") },
+        uGreenColor: { value: new THREE.Color("#385e3e") },
+        uWaterColor: { value: new THREE.Color("#1c5d8a") },
+      };
+
+      function createTerrainMaterial(maskTexture) {
+        const mat = new THREE.MeshStandardMaterial({
+          roughness: 0.97,
+          side: THREE.DoubleSide,
+          shadowSide: THREE.FrontSide,
+        });
+        if (maskTexture) mat.map = maskTexture;
+        mat.customProgramCacheKey = () => "terrain_mask_shader";
+        mat.onBeforeCompile = shader => {
+          shader.uniforms.uGroundColor = sharedTerrainUniforms.uGroundColor;
+          shader.uniforms.uGreenColor = sharedTerrainUniforms.uGreenColor;
+          shader.uniforms.uWaterColor = sharedTerrainUniforms.uWaterColor;
+
+          shader.fragmentShader = shader.fragmentShader
+            .replace(
+              "#include <common>",
+              "#include <common>\nuniform vec3 uGroundColor;\nuniform vec3 uGreenColor;\nuniform vec3 uWaterColor;",
+            )
+            .replace(
+              "#include <map_fragment>",
+              `
+              #ifdef USE_MAP
+                vec2 maskUv = vec2(vMapUv.x, 1.0 - vMapUv.y);
+                vec4 mask = texture2D( map, maskUv );
+                float green = smoothstep(0.35, 0.65, mask.r);
+                float water = smoothstep(0.35, 0.65, mask.g);
+                float waterEdge = smoothstep(0.18, 0.38, mask.g) * (1.0 - water);
+                vec3 mixedColor = mix(uGroundColor, uGreenColor, green);
+                mixedColor = mix(mixedColor, uWaterColor * 0.7, waterEdge * 0.5);
+                mixedColor = mix(mixedColor, uWaterColor, water);
+                diffuseColor.rgb = mixedColor;
+              #else
+                diffuseColor.rgb = uGroundColor;
+              #endif
+              `
+            );
+        };
+        return mat;
+      }
+
+      // NOAA Solar Calculations for Bengaluru (lat 12.9716, lon 77.5946, IST UTC+5:30)
+      function calculateSunPosition(dateStr, hours, minutes) {
+        const parts = (dateStr || "2026-11-24").split("-");
+        const year = parseInt(parts[0], 10) || 2026;
+        const month = parseInt(parts[1], 10) || 11;
+        const day = parseInt(parts[2], 10) || 24;
+
+        const N1 = Math.floor(275 * month / 9);
+        const N2 = Math.floor((month + 9) / 12);
+        const N3 = (1 + Math.floor((year - 4 * Math.floor(year / 4) + 2) / 3));
+        const dayOfYear = N1 - (N2 * N3) + day - 30;
+
+        const totalHours = hours + minutes / 60;
+        const gamma = 2 * Math.PI / 365 * (dayOfYear - 1 + (totalHours - 12) / 24);
+
+        const eqtime = 229.18 * (0.000075 + 0.001868 * Math.cos(gamma) - 0.032077 * Math.sin(gamma)
+          - 0.014615 * Math.cos(2 * gamma) - 0.040849 * Math.sin(2 * gamma));
+
+        const decl = 0.006918 - 0.399912 * Math.cos(gamma) + 0.070257 * Math.sin(gamma)
+          - 0.006758 * Math.cos(2 * gamma) + 0.000907 * Math.sin(2 * gamma)
+          - 0.002697 * Math.cos(3 * gamma) + 0.00148 * Math.sin(3 * gamma);
+
+        const timeOffset = eqtime + 4 * 77.5946 - 330.0;
+        const trueSolarTime = totalHours * 60 + timeOffset;
+
+        const ha = (trueSolarTime / 4.0) - 180.0;
+        const haRad = ha * Math.PI / 180;
+        const latRad = 12.9716 * Math.PI / 180;
+
+        const cosZenith = Math.sin(latRad) * Math.sin(decl) + Math.cos(latRad) * Math.cos(decl) * Math.cos(haRad);
+        const zenithRad = Math.acos(Math.max(-1.0, Math.min(1.0, cosZenith)));
+        const elevationDeg = 90.0 - zenithRad * 180 / Math.PI;
+
+        const y = -Math.sin(haRad);
+        const x = Math.tan(decl) * Math.cos(latRad) - Math.sin(latRad) * Math.cos(haRad);
+        let azimuthDeg = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+
+        return { elevation: elevationDeg, azimuth: azimuthDeg };
+      }
+
+      function formatAzimuth(deg) {
+        const cardinals = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
+        const idx = Math.round(deg / 22.5) % 16;
+        return `${Math.round(deg)}° (${cardinals[idx]})`;
+      }
+
+      let currentSunVector = new THREE.Vector3(0, 1, 0);
+      let currentSunElevation = 56.5;
+      let currentSunAzimuth = 2.8;
+
+      function updateSunAndAtmosphere(dateStr, hours, minutes) {
+        const { elevation, azimuth } = calculateSunPosition(dateStr, hours, minutes);
+        currentSunElevation = elevation;
+        currentSunAzimuth = azimuth;
+
+        const elevSign = elevation >= 0 ? "+" : "";
+        if (sunElevVal) sunElevVal.textContent = `${elevSign}${elevation.toFixed(1)}°`;
+        if (sunAzimVal) sunAzimVal.textContent = formatAzimuth(azimuth);
+
+        const phiRad = elevation * Math.PI / 180;
+        const thetaRad = azimuth * Math.PI / 180;
+        const dirX = Math.cos(phiRad) * Math.sin(thetaRad);
+        const dirY = Math.sin(phiRad);
+        const dirZ = -Math.cos(phiRad) * Math.cos(thetaRad);
+        currentSunVector.set(dirX, dirY, dirZ);
+
+        // Night level keyed smoothly to sun elevation
+        // elevation >= 4° -> nightLevel = 0.0
+        // elevation <= -6° -> nightLevel = 1.0
+        const nightLevelNorm = Math.max(0, Math.min(1, (4.0 - elevation) / 10.0));
+        nightLevel = nightLevelNorm * nightLevelNorm * (3.0 - 2.0 * nightLevelNorm);
+        if (windowShader) windowShader.uniforms.uNight.value = nightLevel;
+        for (const matShader of metroMaterials) {
+          if (matShader.uniforms?.uNight) matShader.uniforms.uNight.value = nightLevel;
+        }
+
+        // Starfield opacity: fades in when sun is below -6° elevation down to -14°
+        if (starMaterial) {
+          const starProgress = Math.max(0, Math.min(1, (-elevation - 6.0) / 8.0));
+          starMaterial.opacity = starProgress * starProgress * (3.0 - 2.0 * starProgress);
+        }
+
+        // Physical color transitions:
+        let sunCol = new THREE.Color();
+        let sunInt = 1.8;
+        let skyCol = new THREE.Color();
+        let hemiSky = new THREE.Color();
+        let hemiGnd = new THREE.Color();
+        let hemiInt = 1.45;
+
+        if (elevation >= 18.0) {
+          const t = Math.min(1.0, (elevation - 18.0) / 45.0);
+          sunCol.set("#fff8ee");
+          sunInt = 1.6 + 0.35 * t;
+          skyCol.set("#526b85");
+          hemiSky.set("#b5cbe8");
+          hemiGnd.set("#283039");
+          hemiInt = 1.35 + 0.15 * t;
+        } else if (elevation >= 0.0) {
+          const t = elevation / 18.0;
+          const sunsetSun = new THREE.Color("#f59e0b");
+          const daySun = new THREE.Color("#fff8ee");
+          sunCol.copy(sunsetSun).lerp(daySun, Math.pow(t, 0.7));
+          sunInt = 0.5 + 1.1 * t;
+
+          const sunsetSky = new THREE.Color("#2d3748").lerp(new THREE.Color("#9a3412"), 0.35);
+          const daySky = new THREE.Color("#526b85");
+          skyCol.copy(sunsetSky).lerp(daySky, t);
+
+          const sunsetHemiSky = new THREE.Color("#d97706");
+          const dayHemiSky = new THREE.Color("#b5cbe8");
+          hemiSky.copy(sunsetHemiSky).lerp(dayHemiSky, t);
+          hemiGnd.set("#232b35");
+          hemiInt = 0.75 + 0.6 * t;
+        } else if (elevation >= -6.0) {
+          const t = (elevation + 6.0) / 6.0;
+          const twilightSun = new THREE.Color("#4338ca");
+          const sunsetSun = new THREE.Color("#f59e0b");
+          sunCol.copy(twilightSun).lerp(sunsetSun, t);
+          sunInt = 0.15 + 0.35 * t;
+
+          const twilightSky = new THREE.Color("#0f172a");
+          const sunsetSky = new THREE.Color("#2d3748").lerp(new THREE.Color("#9a3412"), 0.35);
+          skyCol.copy(twilightSky).lerp(sunsetSky, t);
+
+          const twilightHemiSky = new THREE.Color("#1e1b4b");
+          const sunsetHemiSky = new THREE.Color("#d97706");
+          hemiSky.copy(twilightHemiSky).lerp(sunsetHemiSky, t);
+          hemiGnd.set("#111827");
+          hemiInt = 0.4 + 0.35 * t;
+        } else {
+          const t = Math.min(1.0, (-elevation - 6.0) / 10.0);
+          sunCol.set("#93c5fd");
+          sunInt = 0.18 * (1.0 - 0.4 * t);
+          skyCol.set("#0a0e14");
+          hemiSky.set("#0a0f18");
+          hemiGnd.set("#020617");
+          hemiInt = 0.32;
+        }
+
+        sunLight.color.copy(sunCol);
+        sunLight.intensity = sunInt;
+        hemiLight.color.copy(hemiSky);
+        hemiLight.groundColor.copy(hemiGnd);
+        hemiLight.intensity = hemiInt;
+
+        if (window.forceBlackBackground) {
+          scene.background.set(0x000000);
+          if (scene.fog) scene.fog.color.set(0x000000);
+        } else {
+          scene.background.copy(skyCol);
+          if (scene.fog) scene.fog.color.copy(skyCol);
+        }
+
+        if (shadowsEnabled && elevation > 0.5) {
+          sunLight.castShadow = true;
+          renderer.shadowMap.enabled = true;
+        } else {
+          sunLight.castShadow = false;
+        }
+
+        const currentGround = new THREE.Color().copy(dayTerrain).lerp(nightTerrain, nightLevel);
+        const currentGreen = new THREE.Color().copy(dayGreen).lerp(nightGreen, nightLevel);
+        const currentWater = new THREE.Color().copy(dayWater).lerp(nightWater, nightLevel);
+
+        sharedTerrainUniforms.uGroundColor.value.copy(currentGround);
+        sharedTerrainUniforms.uGreenColor.value.copy(currentGreen);
+        sharedTerrainUniforms.uWaterColor.value.copy(currentWater);
+        groundMaterial.color.copy(currentGround);
+
+        roadMaterial.color.copy(dayRoad).lerp(nightRoad, nightLevel);
+        if (nightLevel > 0.05) {
+          roadMaterial.emissive.copy(nightRoadEmissive);
+          roadMaterial.emissiveIntensity = 0.15 * nightLevel;
+        } else {
+          roadMaterial.emissive.set("#000000");
+          roadMaterial.emissiveIntensity = 0.0;
+        }
+      }
 
       function updateActivePreset() {
         const val = Number(timeSlider.value);
@@ -559,29 +1419,23 @@
       function setTime(value) {
         const progress = Number(value) / 100;
         const totalMinutes = Math.round((6 * 60 + progress * 16 * 60) / 10) * 10;
-        timeLabel.textContent = `${String(Math.floor(totalMinutes / 60) % 24).padStart(2, "0")}:${String(totalMinutes % 60).padStart(2, "0")}`;
-        nightLevel = Math.max(0, Math.min(1, (progress - 0.52) * 2.3));
-        if (windowShader) windowShader.uniforms.uNight.value = nightLevel;
-        scene.background.set("#10161e").lerp(new THREE.Color("#526b85"), 1 - nightLevel);
-        moon.intensity = 0.75 + (1 - nightLevel) * 1.7;
-        waterMaterial.color.copy(dayWater).lerp(nightWater, nightLevel);
-        greenMaterial.color.copy(dayGreen).lerp(nightGreen, nightLevel);
-        terrainMaterial.color.copy(dayTerrain).lerp(nightTerrain, nightLevel);
-        groundMaterial.color.copy(dayTerrain).lerp(nightTerrain, nightLevel);
-        roadMaterial.color.copy(dayRoad).lerp(nightRoad, nightLevel);
-        if (nightLevel > 0.05) {
-          roadMaterial.emissive.copy(nightRoadEmissive);
-          roadMaterial.emissiveIntensity = 0.45 * nightLevel;
-        } else {
-          roadMaterial.emissive.set("#000000");
-          roadMaterial.emissiveIntensity = 0.0;
-        }
-        waterLineMaterial.color.copy(dayWater).lerp(nightWater, nightLevel);
-        for (const matShader of metroMaterials) {
-          if (matShader.uniforms?.uNight) matShader.uniforms.uNight.value = nightLevel;
-        }
+        const hours = Math.floor(totalMinutes / 60) % 24;
+        const minutes = totalMinutes % 60;
+        timeLabel.textContent = `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+
+        const dateStr = datePicker ? datePicker.value : "2026-11-24";
+        updateSunAndAtmosphere(dateStr, hours, minutes);
         updateActivePreset();
       }
+
+      window.setTimeByClock = function(hours, minutes) {
+        const totalMinutes = hours * 60 + minutes;
+        const progress = Math.max(0, Math.min(1, (totalMinutes - 360) / (16 * 60)));
+        const sliderVal = progress * 100;
+        timeSlider.value = String(sliderVal);
+        setTime(sliderVal);
+        scheduleHashUpdate();
+      };
 
       const buildQueue = [];
       let nextBuildId = 0;
@@ -606,7 +1460,7 @@
 
       function createBuildWorker() {
         const slot = {
-          worker: new Worker(new URL("./chunk-worker.js?v=5", import.meta.url), { type: "module" }),
+          worker: new Worker(new URL("./chunk-worker.js?v=" + DATA_VERSION, import.meta.url), { type: "module" }),
           current: null,
           failed: false,
         };
@@ -652,6 +1506,12 @@
           "normal",
           new THREE.BufferAttribute(data.normal, 3),
         );
+        if (data.uv) {
+          geometry.setAttribute(
+            "uv",
+            new THREE.BufferAttribute(data.uv, 2),
+          );
+        }
         if (data.color) {
           geometry.setAttribute(
             "color",
@@ -672,6 +1532,19 @@
       }
 
       function restoreChunkGeometry(result, key) {
+        let maskTexture = null;
+        if (result.maskBitmap) {
+          maskTexture = new THREE.Texture(result.maskBitmap);
+          maskTexture.flipY = false;
+          maskTexture.minFilter = THREE.LinearMipmapLinearFilter;
+          maskTexture.magFilter = THREE.LinearFilter;
+          maskTexture.generateMipmaps = true;
+          maskTexture.colorSpace = THREE.NoColorSpace;
+          maskTexture.needsUpdate = true;
+        }
+
+        const terrainMat = createTerrainMaterial(maskTexture);
+
         return {
           buildingMesh: restoreGeometry(
             result.building,
@@ -679,21 +1552,39 @@
             `buildings-${key}`,
           ),
           buildingBounds: result.bounds,
+          buildingExtents: result.verticalExtents,
+          maskTexture,
           terrainMesh: restoreGeometry(
             result.ground.terrain,
-            terrainMaterial,
+            terrainMat,
             `terrain-${key}`,
           ),
           groundMeshes: [
-            restoreGeometry(result.ground.water, waterMaterial, `ground-${key}-water`),
-            restoreGeometry(result.ground.waterLines, waterLineMaterial, `ground-${key}-water-lines`),
-            restoreGeometry(result.ground.green, greenMaterial, `ground-${key}-green`),
             restoreGeometry(result.ground.roads, roadMaterial, `ground-${key}-roads`),
           ].filter(Boolean),
+          majorRoads: result.majorRoads || [],
+          trafficMesh: null,
+          trafficCount: 0,
         };
       }
 
       function disposeChunk(state) {
+        if (state.trafficMesh) {
+          trafficGroup.remove(state.trafficMesh);
+          if (state.trafficMesh.geometry) state.trafficMesh.geometry.dispose();
+          if (state.trafficMesh.material) {
+            if (state.trafficMesh.material.uniforms?.uRoadTexture?.value) {
+              state.trafficMesh.material.uniforms.uRoadTexture.value.dispose();
+            }
+            state.trafficMesh.material.dispose();
+          }
+          state.trafficMesh = null;
+          totalTrafficVehicles -= (state.trafficCount || 0);
+          state.trafficCount = 0;
+          if (totalTrafficVehicles < MAX_TOTAL_TRAFFIC) {
+            isTrafficCapped = false;
+          }
+        }
         if (state.buildingMesh) {
           buildingGroup.remove(state.buildingMesh);
           state.buildingMesh.geometry.dispose();
@@ -701,6 +1592,16 @@
         if (state.terrainMesh) {
           terrainGroup.remove(state.terrainMesh);
           state.terrainMesh.geometry.dispose();
+          if (state.terrainMesh.material) {
+            state.terrainMesh.material.dispose();
+          }
+        }
+        if (state.maskTexture) {
+          state.maskTexture.dispose();
+          if (state.maskTexture.source?.data?.close) {
+            state.maskTexture.source.data.close();
+          }
+          state.maskTexture = null;
         }
         for (const mesh of state.groundMeshes) {
           groundGroup.remove(mesh);
@@ -752,6 +1653,31 @@
         return Math.hypot(center.x - controls.target.x, center.z - controls.target.z);
       }
 
+      function applyShadowFlags(state) {
+        if (!state || !state.chunk) return;
+        const dist = chunkDistance(state.chunk);
+        const inShadowRadius = dist <= 2000;
+        const cast = shadowsEnabled && inShadowRadius;
+        const recv = shadowsEnabled && inShadowRadius;
+        if (state.buildingMesh) {
+          state.buildingMesh.castShadow = cast;
+          state.buildingMesh.receiveShadow = recv;
+        }
+        if (state.terrainMesh) {
+          state.terrainMesh.receiveShadow = recv;
+        }
+        if (state.groundMeshes) {
+          for (const m of state.groundMeshes) m.receiveShadow = recv;
+        }
+      }
+
+      function updateAllChunkShadows() {
+        for (const state of loadedChunks.values()) {
+          applyShadowFlags(state);
+        }
+        if (ground) ground.receiveShadow = shadowsEnabled;
+      }
+
       function initialChunkLod(distance) {
         return distance < 1500 ? "near" : distance <= 4000 ? "mid" : "far";
       }
@@ -787,9 +1713,20 @@
       }
 
       function updateHud() {
+        window.totalTrafficVehicles = totalTrafficVehicles;
+        window.isTrafficCapped = isTrafficCapped;
         chunkCountElement.textContent = `${loadedChunks.size} / ${eligibleCount}`;
         renderStatsElement.textContent =
           `${renderer.info.render.calls.toLocaleString()} / ${renderer.info.render.triangles.toLocaleString()}`;
+        if (trafficCountBadge) {
+          if (trafficEnabled && trafficDensity !== "off") {
+            trafficCountBadge.textContent = isTrafficCapped
+              ? `${totalTrafficVehicles.toLocaleString()} vehicles (capped)`
+              : `${totalTrafficVehicles.toLocaleString()} vehicles`;
+          } else {
+            trafficCountBadge.textContent = "0 vehicles";
+          }
+        }
         updateVisibleBuildingCount();
         updateLoadingOverlay(loadedChunks.size, eligibleCount);
       }
@@ -820,8 +1757,9 @@
           landmarkLabelElement.style.display = "block";
         }
         getTerrainElevationAtLocal(x, north).then(baseElevation => {
+          const scaledElevation = baseElevation * verticalExaggeration;
           const startTime = performance.now();
-          const endTarget = new THREE.Vector3(x, baseElevation, -north);
+          const endTarget = new THREE.Vector3(x, scaledElevation, -north);
           const horizontalOffset = aerial ? 1500 : 650;
           const altitude = Number.isFinite(altitudeOverride)
             ? altitudeOverride
@@ -830,7 +1768,7 @@
               : 520;
           const endPosition = new THREE.Vector3(
             x + horizontalOffset,
-            baseElevation + altitude,
+            scaledElevation + altitude,
             -north + horizontalOffset,
           );
           function animateFlight(now) {
@@ -851,6 +1789,10 @@
       window.flyToLocation = flyToLocation;
       window.controls = controls;
       window.camera = camera;
+      window.renderer = renderer;
+      window.trafficGroup = trafficGroup;
+      window.getTotalTrafficVehicles = () => totalTrafficVehicles;
+      window.loadedChunks = loadedChunks;
 
       function flyToLandmark(landmark) {
         if (!Number.isFinite(landmark.lat) || !Number.isFinite(landmark.lon)) return;
@@ -858,7 +1800,14 @@
         const label = hasVerifiedHeight
           ? `${landmark.name} · ${Number(landmark.height_m).toLocaleString()} m`
           : `${landmark.name}`;
-        flyToLocation(landmark.lat, landmark.lon, label, false);
+        const isHero = landmark.name.includes("Vidhana Soudha") || landmark.name.includes("UB") || landmark.name.includes("Terminal 2");
+        flyToLocation(landmark.lat, landmark.lon, label, false, isHero ? 320 : null);
+        if (isHero) {
+          setTimeout(() => {
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = 0.5;
+          }, 1600);
+        }
       }
 
       async function loadLandmarks() {
@@ -997,8 +1946,10 @@
         const at = (col, row) => grid.heights[row * grid.width + col];
         const lower = at(x0, y0) * (1 - tx) + at(x1, y0) * tx;
         const upper = at(x0, y1) * (1 - tx) + at(x1, y1) * tx;
-        return (lower * (1 - ty) + upper * ty) * verticalExaggeration;
+        const val = lower * (1 - ty) + upper * ty;
+        return val;
       }
+      window.getTerrainElevationAtLocal = getTerrainElevationAtLocal;
 
       function removeBuildingMesh(state) {
         if (state.buildingMesh) {
@@ -1055,10 +2006,12 @@
               `buildings-${chunkKey(state.chunk)}-${lod}`,
             );
             state.buildingBounds = result.bounds;
+            state.buildingExtents = result.verticalExtents;
             state.lod = lod;
             state.pendingLod = null;
             state.exaggeration = exaggeration;
             if (state.buildingMesh) buildingGroup.add(state.buildingMesh);
+            applyShadowFlags(state);
             if (exaggeration !== verticalExaggeration) {
               rebuildLoadedChunk(state);
             }
@@ -1108,6 +2061,8 @@
           if (state.buildingMesh) buildingGroup.add(state.buildingMesh);
           if (state.terrainMesh) terrainGroup.add(state.terrainMesh);
           for (const mesh of state.groundMeshes) groundGroup.add(mesh);
+          buildChunkTraffic(state);
+          applyShadowFlags(state);
           updateHud();
           if (exaggeration !== verticalExaggeration) rebuildLoadedChunk(state);
         } catch (error) {
@@ -1168,6 +2123,8 @@
           if (state.buildingMesh) buildingGroup.add(state.buildingMesh);
           if (state.terrainMesh) terrainGroup.add(state.terrainMesh);
           for (const mesh of state.groundMeshes) groundGroup.add(mesh);
+          buildChunkTraffic(state);
+          applyShadowFlags(state);
           loadedChunks.set(key, state);
           if (state.exaggeration !== verticalExaggeration) {
             rebuildLoadedChunk(state);
@@ -1196,6 +2153,7 @@
         }).filter(item => item.distance <= loadedRadius)
           .sort((a, b) => a.distance - b.distance);
         eligibleCount = candidates.length;
+        window.eligibleCount = eligibleCount;
         desiredKeys = new Set(candidates.map(item => chunkKey(item.chunk)));
 
         for (const [key, state] of loadedChunks) {
@@ -1221,6 +2179,7 @@
         if (loadedChunks.size === eligibleCount) {
           statusElement.textContent =
             `Loaded ${loadedChunks.size} nearby chunks · ${loadedRadius / 1000} km radius`;
+          rebalanceTraffic();
         }
       }
 
@@ -1254,13 +2213,14 @@
         ) / totalWeight;
 
         camera.far = extent * 10;
-        controls.minDistance = Math.max(80, extent * 0.025);
+        controls.minDistance = 50;
         controls.maxDistance = extent * 6;
 
         if (!hasRestoredViewFromHash) {
           // Default view: golden hour over Vidhana Soudha, Cubbon Park and MG Road showing the central city
           const targetX = 180, targetY = 620;
-          const centerElevation = await getTerrainElevationAtLocal(targetX, targetY);
+          const rawElevation = await getTerrainElevationAtLocal(targetX, targetY);
+          const centerElevation = rawElevation * verticalExaggeration;
           controls.target.set(targetX, centerElevation + 20, -targetY);
           camera.position.set(
             targetX + 1650,
@@ -1321,6 +2281,57 @@
         });
       }
 
+      if (datePicker) {
+        datePicker.addEventListener("change", () => {
+          setTime(timeSlider.value);
+          scheduleHashUpdate();
+        });
+      }
+
+      if (shadowsToggle) {
+        shadowsToggle.addEventListener("change", event => {
+          shadowsEnabled = event.target.checked;
+          updateAllChunkShadows();
+          if (shadowsEnabled && currentSunElevation > 0.5) {
+            sunLight.castShadow = true;
+            renderer.shadowMap.enabled = true;
+          } else {
+            sunLight.castShadow = false;
+          }
+          scheduleHashUpdate();
+        });
+      }
+
+      if (trafficToggle) {
+        trafficToggle.addEventListener("change", event => {
+          trafficEnabled = event.target.checked;
+          if (!trafficEnabled) {
+            if (trafficDensitySelect) trafficDensitySelect.value = "off";
+          } else if (trafficDensity === "off") {
+            trafficDensity = "low";
+            if (trafficDensitySelect) trafficDensitySelect.value = "low";
+          }
+          updateTrafficSettings();
+        });
+      }
+
+      if (trafficDensitySelect) {
+        trafficDensitySelect.addEventListener("change", event => {
+          trafficDensity = event.target.value;
+          trafficEnabled = trafficDensity !== "off";
+          if (trafficToggle) trafficToggle.checked = trafficEnabled;
+          updateTrafficSettings();
+        });
+      }
+
+      if (trafficDayToggle) {
+        trafficDayToggle.addEventListener("change", event => {
+          trafficDayEnabled = event.target.checked;
+          trafficUniforms.uTrafficDay.value = trafficDayEnabled ? 1.0 : 0.0;
+          scheduleHashUpdate();
+        });
+      }
+
       timeSlider.addEventListener("input", event => {
         setTime(event.target.value);
         scheduleHashUpdate();
@@ -1328,31 +2339,50 @@
 
       radiusSlider.addEventListener("change", event => {
         loadedRadius = Number(event.target.value) * 1000;
+        // Default on at Quality radius 2 km, off beyond that
+        if (shadowsToggle) {
+          shadowsEnabled = loadedRadius <= 2000;
+          shadowsToggle.checked = shadowsEnabled;
+          updateAllChunkShadows();
+          if (shadowsEnabled && currentSunElevation > 0.5) {
+            sunLight.castShadow = true;
+            renderer.shadowMap.enabled = true;
+          } else {
+            sunLight.castShadow = false;
+          }
+        }
         scheduleHashUpdate();
         refreshChunkSet();
       });
 
-      verticalExaggerationSlider.addEventListener("change", event => {
+      function updateVerticalExaggeration(value) {
         const oldTargetY = controls.target.y;
         const cameraOffset = camera.position.y - oldTargetY;
-        verticalExaggeration = Number(event.target.value);
+        verticalExaggeration = Number(value);
+        trafficUniforms.uExaggeration.value = verticalExaggeration;
         verticalExaggerationLabel.textContent = `${verticalExaggeration.toFixed(1)}x`;
         if (manifest?.terrain) {
           ground.position.y =
             manifest.terrain.minElevationMeters * verticalExaggeration - 2;
         }
         getTerrainElevationAtLocal(controls.target.x, -controls.target.z).then(base => {
-          controls.target.y = base;
-          camera.position.y = base + cameraOffset;
+          const scaledBase = base * verticalExaggeration;
+          controls.target.y = scaledBase;
+          camera.position.y = scaledBase + cameraOffset;
         }).catch(error => {
           statusElement.textContent = error.message || "Could not update terrain elevation.";
           statusElement.classList.add("error");
           console.error(error);
         });
         buildMetroVisuals(verticalExaggeration);
+        buildAirportVisuals(verticalExaggeration);
         for (const state of loadedChunks.values()) rebuildLoadedChunk(state);
         scheduleHashUpdate();
-      });
+      }
+      window.updateVerticalExaggeration = updateVerticalExaggeration;
+
+      verticalExaggerationSlider.addEventListener("input", event => updateVerticalExaggeration(event.target.value));
+      verticalExaggerationSlider.addEventListener("change", event => updateVerticalExaggeration(event.target.value));
 
       heightSourceToggle.addEventListener("change", event => {
         setHeightSourceDebug(event.target.checked);
@@ -1362,6 +2392,12 @@
       controls.addEventListener("end", () => {
         scheduleHashUpdate();
       });
+
+      // Airport Implementation (Kempegowda International Airport)
+      const airportGroup = new THREE.Group();
+      scene.add(airportGroup);
+      let airportData = null;
+      window.airportGroup = airportGroup;
 
       // Metro Implementation
       const metroToggle = document.querySelector("#metro-toggle");
@@ -1527,6 +2563,57 @@
         return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.2 }));
       }
 
+      function buildPortalAboveGroundMesh(tracks, exaggeration) {
+        const positions = [];
+        const normals = [];
+        const colors = [];
+        const halfWidth = 2.4;
+
+        for (const track of tracks) {
+          const pts = track.points;
+          if (!pts || pts.length < 2) continue;
+          const cLine = new THREE.Color(track.color || "#00e5ff");
+
+          for (let i = 1; i < pts.length; i++) {
+            const [x0, y0, trackZ0, g0] = pts[i - 1];
+            const [x1, y1, trackZ1, g1] = pts[i];
+            if (trackZ0 < g0 && trackZ1 < g0) continue;
+
+            const dx = x1 - x0;
+            const dy = y1 - y0;
+            const len = Math.hypot(dx, dy);
+            if (len < 0.05) continue;
+            const nx = -dy / len;
+            const ny = dx / len;
+
+            const z0_clamped = Math.max(g0 + 0.2, trackZ0);
+            const z1_clamped = Math.max(g1 + 0.2, trackZ1);
+            const y_elev0 = z0_clamped * exaggeration;
+            const y_elev1 = z1_clamped * exaggeration;
+
+            const t0Lx = x0 - nx * halfWidth, t0Lz = -(y0 - ny * halfWidth);
+            const t0Rx = x0 + nx * halfWidth, t0Rz = -(y0 + ny * halfWidth);
+            const t1Lx = x1 - nx * halfWidth, t1Lz = -(y1 - ny * halfWidth);
+            const t1Rx = x1 + nx * halfWidth, t1Rz = -(y1 + ny * halfWidth);
+
+            positions.push(
+              t0Lx, y_elev0, t0Lz,  t0Rx, y_elev0, t0Rz,  t1Rx, y_elev1, t1Rz,
+              t0Lx, y_elev0, t0Lz,  t1Rx, y_elev1, t1Rz,  t1Lx, y_elev1, t1Lz,
+            );
+            for (let k = 0; k < 6; k++) {
+              normals.push(0, 1, 0);
+              colors.push(cLine.r, cLine.g, cLine.b);
+            }
+          }
+        }
+        if (positions.length === 0) return null;
+        const geo = new THREE.BufferGeometry();
+        geo.setAttribute("position", new THREE.Float32BufferAttribute(positions, 3));
+        geo.setAttribute("normal", new THREE.Float32BufferAttribute(normals, 3));
+        geo.setAttribute("color", new THREE.Float32BufferAttribute(colors, 3));
+        return new THREE.Mesh(geo, new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.5, metalness: 0.2 }));
+      }
+
       function buildUndergroundGhostMesh(tracks, exaggeration) {
         const positions = [];
         const colors = [];
@@ -1538,17 +2625,17 @@
           const cLine = new THREE.Color(track.color || "#00e5ff");
 
           for (let i = 1; i < pts.length; i++) {
-            const [x0, y0, , g0] = pts[i - 1];
-            const [x1, y1, , g1] = pts[i];
+            const [x0, y0, trackZ0, g0] = pts[i - 1];
+            const [x1, y1, trackZ1, g1] = pts[i];
             const dx = x1 - x0;
             const dy = y1 - y0;
             const len = Math.hypot(dx, dy);
             if (len < 0.05) continue;
             const nx = -dy / len;
             const ny = dx / len;
-            // Ghost line slightly below surface or subsurface
-            const y_elev0 = (g0 - 6.0) * exaggeration;
-            const y_elev1 = (g1 - 6.0) * exaggeration;
+            // Ramp for portal / subsurface depth for underground
+            const y_elev0 = Number.isFinite(trackZ0) ? trackZ0 * exaggeration : (g0 - 6.0) * exaggeration;
+            const y_elev1 = Number.isFinite(trackZ1) ? trackZ1 * exaggeration : (g1 - 6.0) * exaggeration;
 
             const t0Lx = x0 - nx * halfWidth, t0Lz = -(y0 - ny * halfWidth);
             const t0Rx = x0 + nx * halfWidth, t0Rz = -(y0 + ny * halfWidth);
@@ -1579,9 +2666,9 @@
         return mesh;
       }
 
-      function buildConstructionTracksMesh(tracks, viaductOffset, exaggeration) {
+      function buildConstructionTracksMesh(tracks, viaductOffset, exaggeration, isProposed = false) {
         const linePositions = [];
-        const cAmber = new THREE.Color("#f59e0b");
+        const trackColor = isProposed ? new THREE.Color("#fef08a") : new THREE.Color("#f59e0b");
 
         for (const track of tracks) {
           const pts = track.points;
@@ -1599,10 +2686,12 @@
         const geo = new THREE.BufferGeometry();
         geo.setAttribute("position", new THREE.Float32BufferAttribute(linePositions, 3));
         const mat = new THREE.LineDashedMaterial({
-          color: cAmber,
-          dashSize: 8,
+          color: trackColor,
+          dashSize: isProposed ? 4 : 8,
           gapSize: 6,
           linewidth: 2,
+          transparent: isProposed,
+          opacity: isProposed ? 0.65 : 0.95,
         });
         const line = new THREE.LineSegments(geo, mat);
         line.computeLineDistances();
@@ -1676,25 +2765,37 @@
           }
         }
 
-        // 2. At-Grade Tracks
+        // 2. At-Grade Tracks & Portal Ramps (above ground)
         const gradeOperational = tracks.filter(t => t.mode === "at_grade" && !t.is_construction);
         if (gradeOperational.length > 0) {
           const gradeMesh = buildGradeTracksMesh(gradeOperational, exaggeration);
           if (gradeMesh) metroGroup.add(gradeMesh);
         }
+        const portalOperational = tracks.filter(t => t.mode === "portal" && !t.is_construction);
+        if (portalOperational.length > 0) {
+          const portalMesh = buildPortalAboveGroundMesh(portalOperational, exaggeration);
+          if (portalMesh) metroGroup.add(portalMesh);
+        }
 
-        // 3. Underground Ghost Lines (behind showUnderground toggle)
-        const undergroundOperational = tracks.filter(t => t.mode === "underground" && !t.is_construction);
+        // 3. Underground Ghost Lines & Portal Ramps (behind showUnderground toggle)
+        const undergroundOperational = tracks.filter(t => (t.mode === "underground" || t.mode === "portal") && !t.is_construction);
         if (showUnderground && undergroundOperational.length > 0) {
           const undergroundMesh = buildUndergroundGhostMesh(undergroundOperational, exaggeration);
           if (undergroundMesh) metroGroup.add(undergroundMesh);
         }
 
-        // 4. Under Construction Tracks (dashed, behind showConstruction toggle)
-        const constructionTracks = tracks.filter(t => t.is_construction);
-        if (showConstruction && constructionTracks.length > 0) {
-          const constructionMesh = buildConstructionTracksMesh(constructionTracks, viaductOffset, exaggeration);
-          if (constructionMesh) metroGroup.add(constructionMesh);
+        // 4. Under Construction / Planned Tracks (dashed, behind showConstruction toggle)
+        const constructionTracks = tracks.filter(t => t.is_construction && !t.is_proposed);
+        const proposedTracks = tracks.filter(t => t.is_proposed);
+        if (showConstruction) {
+          if (constructionTracks.length > 0) {
+            const constructionMesh = buildConstructionTracksMesh(constructionTracks, viaductOffset, exaggeration, false);
+            if (constructionMesh) metroGroup.add(constructionMesh);
+          }
+          if (proposedTracks.length > 0) {
+            const proposedMesh = buildConstructionTracksMesh(proposedTracks, viaductOffset, exaggeration, true);
+            if (proposedMesh) metroGroup.add(proposedMesh);
+          }
         }
 
         // 5. Metro Stations
@@ -1704,27 +2805,44 @@
         });
 
         if (stations.length > 0) {
-          const elevatedStations = stations.filter(s => s.mode === "elevated");
-          const undergroundStations = stations.filter(s => s.mode === "underground");
-          const gradeStations = stations.filter(s => s.mode === "at_grade");
-
           const stationGeo = new THREE.CylinderGeometry(14, 14, 3.5, 16);
           const beaconGeo = new THREE.CylinderGeometry(1.2, 2.5, 45, 8);
 
-          // Render station instances grouped by line color
-          const stationsByColor = new Map();
+          // Render station instances grouped by (color, state)
+          const stationsByGroup = new Map();
           for (const s of stations) {
-            const c = s.color || "#00e5ff";
-            if (!stationsByColor.has(c)) stationsByColor.set(c, []);
-            stationsByColor.get(c).push(s);
+            let state = "operational";
+            if (s.is_proposed) state = "proposed";
+            else if (s.is_construction) state = "construction";
+            const key = `${s.color || "#00e5ff"}|${state}`;
+            if (!stationsByGroup.has(key)) stationsByGroup.set(key, { color: s.color || "#00e5ff", state, stations: [] });
+            stationsByGroup.get(key).stations.push(s);
           }
 
-          for (const [colorHex, group] of stationsByColor.entries()) {
+          for (const { color: colorHex, state, stations: group } of stationsByGroup.values()) {
+            let stnColor = colorHex;
+            let emissiveIntensity = 0.5;
+            let beaconOpacity = 0.55;
+            let transparent = false;
+
+            if (state === "proposed") {
+              stnColor = "#fef08a";
+              emissiveIntensity = 0.15;
+              beaconOpacity = 0.25;
+              transparent = true;
+            } else if (state === "construction") {
+              stnColor = "#f59e0b";
+              emissiveIntensity = 0.35;
+              beaconOpacity = 0.45;
+              transparent = true;
+            }
+
             const stationMat = new THREE.MeshStandardMaterial({
-              color: colorHex, roughness: 0.3, emissive: colorHex, emissiveIntensity: 0.5
+              color: stnColor, roughness: state === "operational" ? 0.3 : 0.5, emissive: stnColor, emissiveIntensity: emissiveIntensity,
+              transparent: transparent, opacity: transparent ? 0.75 : 1.0
             });
             const beaconMat = new THREE.MeshBasicMaterial({
-              color: colorHex, transparent: true, opacity: 0.55
+              color: stnColor, transparent: true, opacity: beaconOpacity
             });
 
             const stnMesh = new THREE.InstancedMesh(stationGeo, stationMat, group.length);
@@ -1901,7 +3019,10 @@
           metroTooltip.style.top = `${clientY}px`;
           metroTooltipName.textContent = hoveredStation.name;
           const modeStr = hoveredStation.mode ? (hoveredStation.mode.charAt(0).toUpperCase() + hoveredStation.mode.slice(1)) : "Elevated";
-          metroTooltipType.textContent = `${hoveredStation.line || "Metro"} Line · ${modeStr}${hoveredStation.is_construction ? " (Under Construction)" : ""}`;
+          const statusSuffix = hoveredStation.is_proposed
+            ? " (Planned)"
+            : (hoveredStation.is_construction ? " (Under Construction)" : "");
+          metroTooltipType.textContent = `${hoveredStation.line || "Metro"} Line · ${modeStr}${statusSuffix}`;
         } else {
           metroTooltip.style.display = "none";
         }
@@ -1915,7 +3036,7 @@
         3: "raster estimate",
         4: "verified landmark",
         5: "rejected tag",
-        6: "corroborated by floors",
+        6: "OSM tag, unverified",
       };
 
       let buildingNamesData = {};
@@ -1993,6 +3114,27 @@
       }
 
       function pickBuildingAtRay(raycaster) {
+        if (window.heroLandmarksManager) {
+          const heroHits = raycaster.intersectObjects(window.heroLandmarksManager.landmarksGroup.children, true);
+          if (heroHits.length > 0) {
+            let parent = heroHits[0].object;
+            while (parent && !parent.userData?.landmarkConfig) parent = parent.parent;
+            if (parent && parent.userData?.landmarkConfig) {
+              const cfg = parent.userData.landmarkConfig;
+              return {
+                chunkKey: cfg.chunkKey,
+                index: cfg.buildingIndex,
+                height: cfg.verifiedHeight,
+                coords: [cfg.centroid[0] - 20, cfg.centroid[1] - 20, cfg.centroid[0] + 20, cfg.centroid[1] - 20, cfg.centroid[0] + 20, cfg.centroid[1] + 20, cfg.centroid[0] - 20, cfg.centroid[1] + 20],
+                source: 4,
+                baseY: cfg.baseElevation * verticalExaggeration,
+                topY: (cfg.baseElevation + cfg.verifiedHeight) * verticalExaggeration,
+                isHero: true
+              };
+            }
+          }
+        }
+
         let bestBuilding = null;
         let bestDist = Infinity;
         const tempVec = new THREE.Vector3();
@@ -2035,8 +3177,9 @@
               maxN = Math.max(maxN, coords[c + 1]);
             }
             const bHeight = Math.max(3, height) * verticalExaggeration;
-            const baseY = cy - bHeight / 2;
-            const topY = cy + bHeight / 2;
+            const extents = state.buildingExtents;
+            const baseY = extents && extents.length > i * 2 ? extents[i * 2] : (cy - bHeight / 2);
+            const topY = extents && extents.length > i * 2 + 1 ? extents[i * 2 + 1] : (cy + bHeight / 2);
             box.min.set(minX, baseY, -maxN);
             box.max.set(maxX, topY, -minN);
 
@@ -2081,14 +3224,17 @@
                   const source = b[2];
                   const cy = state.buildingBounds[i * 4 + 1];
                   const bHeight = Math.max(3, height) * verticalExaggeration;
+                  const extents = state.buildingExtents;
+                  const baseY = extents && extents.length > i * 2 ? extents[i * 2] : (cy - bHeight / 2);
+                  const topY = extents && extents.length > i * 2 + 1 ? extents[i * 2 + 1] : (cy + bHeight / 2);
                   bestBuilding = {
                     chunkKey: key,
                     index: i,
                     height,
                     coords: b[1],
                     source,
-                    baseY: cy - bHeight / 2,
-                    topY: cy + bHeight / 2,
+                    baseY,
+                    topY,
                   };
                   break;
                 }
@@ -2142,6 +3288,10 @@
         if (!building) {
           panel.style.display = "none";
           highlightBuilding(null);
+          if (landmarkLabelElement) {
+            landmarkLabelElement.style.display = "none";
+            landmarkLabelElement.textContent = "";
+          }
           return;
         }
         highlightBuilding(building);
@@ -2170,8 +3320,24 @@
         const sourceWord = SOURCE_LABEL_MAP[building.source] || "raster estimate";
 
         document.querySelector("#inspect-name").textContent = name || "Unnamed Building";
-        document.querySelector("#inspect-height").textContent = `${heightVal.toFixed(1)} m`;
-        document.querySelector("#inspect-source").textContent = sourceWord;
+        // UB City other towers: UB Tower (index 70) is verified at 123m. Other towers are estimated heights.
+        const isUbOtherTower = (building.chunkKey === "0,0" && [64, 65, 68, 69].includes(building.index));
+        if (isUbOtherTower) {
+          const estH = building.index === 64 ? 95.0 : (building.index === 65 ? 85.0 : (building.index === 68 ? 72.0 : 40.0));
+          document.querySelector("#inspect-height").textContent = `${estH.toFixed(1)} m (procedural estimate)`;
+          document.querySelector("#inspect-source").textContent = "estimated height (unverified)";
+        } else if (matchedLandmark) {
+          if (matchedLandmark.verified && Number.isFinite(matchedLandmark.height_m)) {
+            document.querySelector("#inspect-height").textContent = `${matchedLandmark.height_m.toFixed(1)} m (verified)`;
+            document.querySelector("#inspect-source").textContent = "verified landmark";
+          } else {
+            document.querySelector("#inspect-height").textContent = "— (no verified height)";
+            document.querySelector("#inspect-source").textContent = "unverified (procedural estimate)";
+          }
+        } else {
+          document.querySelector("#inspect-height").textContent = `${heightVal.toFixed(1)} m`;
+          document.querySelector("#inspect-source").textContent = sourceWord;
+        }
         document.querySelector("#inspect-area").textContent = `${Math.round(area).toLocaleString()} m²`;
         document.querySelector("#inspect-coords").textContent = `${lat.toFixed(5)}° N, ${lon.toFixed(5)}° E`;
 
@@ -2198,17 +3364,17 @@
           floorsElem.textContent = floorsH !== null ? `${floorsH.toFixed(1)} m` : "—";
         }
 
-        // Uncertain Height badge vs Corroborated badge
-        const isCorroborated = building.source === 6;
-        const isUncertain = !isCorroborated && building.source !== 4 && (building.source === 5 || ((taggedH !== null && taggedH >= 100) || (floorsH !== null && floorsH >= 100) || (heightVal >= 100 && building.source === 1))) && (rasterVal !== null && rasterVal < 40);
+        // Uncertain Height badge vs OSM tag unverified badge
+        const isUnverified = building.source === 6;
+        const isUncertain = !isUnverified && building.source !== 4 && (building.source === 5 || ((taggedH !== null && taggedH >= 100) || (floorsH !== null && floorsH >= 100) || (heightVal >= 100 && building.source === 1))) && (rasterVal !== null && rasterVal < 40);
         
         const uncertainBadge = document.querySelector("#inspect-uncertain-badge");
         if (uncertainBadge) {
           uncertainBadge.style.display = isUncertain ? "inline-block" : "none";
         }
-        const corroboratedBadge = document.querySelector("#inspect-corroborated-badge");
-        if (corroboratedBadge) {
-          corroboratedBadge.style.display = isCorroborated ? "inline-block" : "none";
+        const unverifiedBadge = document.querySelector("#inspect-unverified-badge");
+        if (unverifiedBadge) {
+          unverifiedBadge.style.display = isUnverified ? "inline-block" : "none";
         }
 
         // Display rejected tag details if applicable
@@ -2241,8 +3407,21 @@
           }
         }
 
+        const isHero = building.isHero ||
+                       (building.chunkKey === "-1,0" && building.index === 192) ||
+                       (building.chunkKey === "0,0" && [70, 64, 65, 68, 69].includes(building.index)) ||
+                       (building.chunkKey === "13,25" && building.index === 39) ||
+                       (name && (name.includes("Vidhana") || name.includes("UB") || name.includes("Terminal 2")));
+        const heroNotice = document.querySelector("#inspect-hero-notice");
+        if (heroNotice) {
+          heroNotice.style.display = isHero ? "block" : "none";
+        }
+
         const badge = document.querySelector("#inspect-badge");
-        if (matchedLandmark) {
+        if (isUbOtherTower) {
+          badge.textContent = "High-rise Tower (Estimated)";
+          badge.style.color = "#38bdf8";
+        } else if (matchedLandmark) {
           badge.textContent = matchedLandmark.category || "Landmark";
           badge.style.color = "#34d399";
         } else if (heightVal >= 50) {
@@ -2305,10 +3484,14 @@
         p.set("cam", `${camera.position.x.toFixed(1)},${camera.position.y.toFixed(1)},${camera.position.z.toFixed(1)}`);
         p.set("target", `${controls.target.x.toFixed(1)},${controls.target.y.toFixed(1)},${controls.target.z.toFixed(1)}`);
         p.set("time", timeSlider.value);
+        if (datePicker && datePicker.value) p.set("date", datePicker.value);
+        p.set("shadows", shadowsEnabled ? "1" : "0");
         p.set("exagg", verticalExaggeration.toFixed(1));
         p.set("radius", radiusSlider.value);
         p.set("metro", metroToggle.checked ? "1" : "0");
         p.set("source", heightSourceToggle.checked ? "1" : "0");
+        p.set("traffic", trafficEnabled ? trafficDensity : "off");
+        p.set("trafficday", trafficDayEnabled ? "1" : "0");
         return p.toString();
       }
 
@@ -2324,6 +3507,20 @@
         if (!location.hash || location.hash.length < 2) return false;
         const p = new URLSearchParams(location.hash.slice(1));
         let restored = false;
+        if (p.has("date")) {
+          const d = p.get("date");
+          if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+            if (datePicker) datePicker.value = d;
+            restored = true;
+          }
+        }
+        if (p.has("shadows")) {
+          shadowsEnabled = p.get("shadows") === "1";
+          if (shadowsToggle) shadowsToggle.checked = shadowsEnabled;
+          updateAllChunkShadows();
+          if (sunLight) sunLight.castShadow = shadowsEnabled && currentSunElevation > 0.5;
+          restored = true;
+        }
         if (p.has("time")) {
           const t = Number(p.get("time"));
           if (Number.isFinite(t)) {
@@ -2331,11 +3528,14 @@
             setTime(t);
             restored = true;
           }
+        } else if (p.has("date")) {
+          setTime(timeSlider.value);
         }
         if (p.has("exagg")) {
           const ex = Number(p.get("exagg"));
           if (Number.isFinite(ex) && ex >= 1 && ex <= 3) {
             verticalExaggeration = ex;
+            trafficUniforms.uExaggeration.value = ex;
             verticalExaggerationSlider.value = String(ex);
             verticalExaggerationLabel.textContent = `${ex.toFixed(1)}x`;
             restored = true;
@@ -2358,6 +3558,29 @@
           const s = p.get("source") === "1";
           heightSourceToggle.checked = s;
           setHeightSourceDebug(s);
+        }
+        if (p.has("traffic")) {
+          const tr = p.get("traffic").toLowerCase();
+          if (tr === "off") {
+            trafficEnabled = false;
+            trafficDensity = "off";
+          } else if (tr === "med" || tr === "medium") {
+            trafficEnabled = true;
+            trafficDensity = "med";
+          } else {
+            trafficEnabled = true;
+            trafficDensity = "low";
+          }
+          if (trafficToggle) trafficToggle.checked = trafficEnabled;
+          if (trafficDensitySelect) trafficDensitySelect.value = trafficDensity;
+          updateTrafficSettings();
+          restored = true;
+        }
+        if (p.has("trafficday")) {
+          trafficDayEnabled = p.get("trafficday") === "1";
+          if (trafficDayToggle) trafficDayToggle.checked = trafficDayEnabled;
+          trafficUniforms.uTrafficDay.value = trafficDayEnabled ? 1.0 : 0.0;
+          restored = true;
         }
         if (p.has("cam") && p.has("target")) {
           const camPts = p.get("cam").split(",").map(Number);
@@ -2383,6 +3606,134 @@
         metroStationsData = stationsRes.ok ? await stationsRes.json() : [];
         window.metroStationsData = metroStationsData;
         buildMetroVisuals(verticalExaggeration);
+      }
+
+      function buildAirportVisuals(exaggeration) {
+        if (!airportData) return;
+        while (airportGroup.children.length > 0) {
+          const child = airportGroup.children[0];
+          airportGroup.remove(child);
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) child.material.forEach(m => m.dispose());
+            else child.material.dispose();
+          }
+        }
+
+        const ribbonPositions = [];
+        const ribbonNormals = [];
+        const ribbonColors = [];
+
+        // 1. Runways (asphalt ribbons with width 45m / 60m)
+        for (const rw of (airportData.runways || [])) {
+          const pts = rw.points;
+          if (!pts || pts.length < 2) continue;
+          const halfWidth = (rw.width || 45.0) / 2.0;
+          for (let i = 1; i < pts.length; i++) {
+            const [x0, y0, z0] = pts[i - 1];
+            const [x1, y1, z1] = pts[i];
+            const dx = x1 - x0, dy = y1 - y0;
+            const len = Math.hypot(dx, dy);
+            if (len < 0.1) continue;
+            const nx = -dy / len, ny = dx / len;
+            const y_elev0 = z0 * exaggeration;
+            const y_elev1 = z1 * exaggeration;
+
+            const t0Lx = x0 - nx * halfWidth, t0Lz = -(y0 - ny * halfWidth);
+            const t0Rx = x0 + nx * halfWidth, t0Rz = -(y0 + ny * halfWidth);
+            const t1Lx = x1 - nx * halfWidth, t1Lz = -(y1 - ny * halfWidth);
+            const t1Rx = x1 + nx * halfWidth, t1Rz = -(y1 + ny * halfWidth);
+
+            ribbonPositions.push(
+              t0Lx, y_elev0, t0Lz,  t0Rx, y_elev0, t0Rz,  t1Rx, y_elev1, t1Rz,
+              t0Lx, y_elev0, t0Lz,  t1Rx, y_elev1, t1Rz,  t1Lx, y_elev1, t1Lz
+            );
+            for (let k = 0; k < 6; k++) {
+              ribbonNormals.push(0, 1, 0);
+              ribbonColors.push(0.18, 0.20, 0.23);
+            }
+          }
+        }
+
+        // 2. Taxiways (width ~20m)
+        for (const tw of (airportData.taxiways || [])) {
+          const pts = tw.points;
+          if (!pts || pts.length < 2) continue;
+          const halfWidth = (tw.width || 20.0) / 2.0;
+          for (let i = 1; i < pts.length; i++) {
+            const [x0, y0, z0] = pts[i - 1];
+            const [x1, y1, z1] = pts[i];
+            const dx = x1 - x0, dy = y1 - y0;
+            const len = Math.hypot(dx, dy);
+            if (len < 0.1) continue;
+            const nx = -dy / len, ny = dx / len;
+            const y_elev0 = z0 * exaggeration;
+            const y_elev1 = z1 * exaggeration;
+
+            const t0Lx = x0 - nx * halfWidth, t0Lz = -(y0 - ny * halfWidth);
+            const t0Rx = x0 + nx * halfWidth, t0Rz = -(y0 + ny * halfWidth);
+            const t1Lx = x1 - nx * halfWidth, t1Lz = -(y1 - ny * halfWidth);
+            const t1Rx = x1 + nx * halfWidth, t1Rz = -(y1 + ny * halfWidth);
+
+            ribbonPositions.push(
+              t0Lx, y_elev0, t0Lz,  t0Rx, y_elev0, t0Rz,  t1Rx, y_elev1, t1Rz,
+              t0Lx, y_elev0, t0Lz,  t1Rx, y_elev1, t1Rz,  t1Lx, y_elev1, t1Lz
+            );
+            for (let k = 0; k < 6; k++) {
+              ribbonNormals.push(0, 1, 0);
+              ribbonColors.push(0.25, 0.28, 0.32);
+            }
+          }
+        }
+
+        if (ribbonPositions.length > 0) {
+          const geo = new THREE.BufferGeometry();
+          geo.setAttribute("position", new THREE.Float32BufferAttribute(ribbonPositions, 3));
+          geo.setAttribute("normal", new THREE.Float32BufferAttribute(ribbonNormals, 3));
+          geo.setAttribute("color", new THREE.Float32BufferAttribute(ribbonColors, 3));
+          const mat = new THREE.MeshStandardMaterial({
+            vertexColors: true,
+            roughness: 0.85,
+            metalness: 0.1,
+            polygonOffset: true,
+            polygonOffsetFactor: -1.5,
+            polygonOffsetUnits: -1.5,
+          });
+          airportGroup.add(new THREE.Mesh(geo, mat));
+        }
+
+        // 3. Aprons
+        const apronTris = airportData.apronTriangles || [];
+        if (apronTris.length >= 9) {
+          const apronPositions = [];
+          const apronNormals = [];
+          for (let i = 0; i < apronTris.length; i += 3) {
+            const x = apronTris[i];
+            const y = apronTris[i + 1];
+            const z = apronTris[i + 2];
+            apronPositions.push(x, z * exaggeration, -y);
+            apronNormals.push(0, 1, 0);
+          }
+          const apronGeo = new THREE.BufferGeometry();
+          apronGeo.setAttribute("position", new THREE.Float32BufferAttribute(apronPositions, 3));
+          apronGeo.setAttribute("normal", new THREE.Float32BufferAttribute(apronNormals, 3));
+          const apronMat = new THREE.MeshStandardMaterial({
+            color: 0x3d4450,
+            roughness: 0.9,
+            metalness: 0.05,
+            polygonOffset: true,
+            polygonOffsetFactor: -1.0,
+            polygonOffsetUnits: -1.0,
+          });
+          airportGroup.add(new THREE.Mesh(apronGeo, apronMat));
+        }
+      }
+
+      async function loadAirport() {
+        const res = await fetch(`data/airport.json?v=${APP_VERSION}`, { cache: "no-cache" });
+        if (!res.ok) return;
+        airportData = await res.json();
+        buildAirportVisuals(verticalExaggeration);
       }
 
       // Metro Sub-toggles
@@ -2421,9 +3772,33 @@
         });
       }
 
+      // Load full attribution notices into About panel
+      async function loadAttributionNotice(path, elementId) {
+        try {
+          const res = await fetch(`${path}?v=${DATA_VERSION}`, { cache: "no-cache" });
+          if (res.ok) {
+            const el = document.getElementById(elementId);
+            if (el) el.textContent = await res.text();
+          }
+        } catch (e) {
+          console.warn(`Could not load notice ${path}:`, e);
+        }
+      }
+      loadAttributionNotice("notices/copernicus.txt", "copernicus-notice-box");
+      loadAttributionNotice("notices/overture.txt", "overture-notice-box");
+
+      // Banner click resets to central overview
+      const brandBanner = document.querySelector("#brand-banner");
+      if (brandBanner) {
+        brandBanner.addEventListener("click", () => {
+          flyToLocation(12.9716, 77.5946, "Bengaluru Central", true, 2200);
+        });
+      }
+
       // Initial Data Loading & Restore
       restoreStateFromHash();
       setTime(timeSlider.value);
+      window.addEventListener("hashchange", restoreStateFromHash);
 
       fetchJSON("building_names.json").then(data => {
         if (data) {
@@ -2467,6 +3842,9 @@
       loadMetro().catch(error => {
         console.error("Could not load metro:", error);
       });
+      loadAirport().catch(error => {
+        console.error("Could not load airport:", error);
+      });
 
       window.addEventListener("resize", () => {
         camera.aspect = innerWidth / innerHeight;
@@ -2483,6 +3861,38 @@
 
         controls.update();
         updateMetroTrains(dt);
+
+        trafficUniforms.uTime.value = now * 0.001;
+        trafficUniforms.uFocusPos.value.copy(controls.target);
+        trafficUniforms.uSunElevation.value = currentSunElevation;
+
+        if (sunLight && sunLight.target) {
+          sunLight.target.position.copy(controls.target);
+          const sunDist = 9000;
+          if (currentSunElevation > -2.0) {
+            sunLight.position.set(
+              controls.target.x + currentSunVector.x * sunDist,
+              controls.target.y + Math.max(0.08, currentSunVector.y) * sunDist,
+              controls.target.z + currentSunVector.z * sunDist
+            );
+          } else {
+            sunLight.position.set(
+              controls.target.x - currentSunVector.x * 0.6 * sunDist,
+              controls.target.y + 0.65 * sunDist,
+              controls.target.z - currentSunVector.z * 0.6 * sunDist
+            );
+          }
+        }
+
+        if (starField) {
+          starField.position.copy(camera.position);
+        }
+
+        if (window.heroLandmarksManager) {
+          const timeMinutes = Number(timeSlider.value) * 15;
+          window.heroLandmarksManager.update(camera, verticalExaggeration, timeMinutes, currentSunElevation);
+        }
+
         renderer.render(scene, camera);
         fpsFrames++;
         if (now - fpsStart >= 1000) {
