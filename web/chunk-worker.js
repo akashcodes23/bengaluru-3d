@@ -514,11 +514,13 @@ function extractMajorRoads(records, terrain, ix, iy) {
     }
   }
 
-  // Divided-carriageway detection: find parallel segments within 40m, angle < 15 deg over >= 30m
-  // (Lowered from 80m to 30m so clipped boundary partners pair symmetrically, preventing one-way fallback anomalies)
+  // Divided-carriageway detection (Tightened per Round 7 audit):
+  // Minimum length 50.0m, mutual-nearest partner matching, angle < 10 degrees (dot >= 0.9848),
+  // matching road class, balanced length ratio (<= 2.5) to avoid junction flares.
+  const candidatePairs = [];
   for (let i = 0; i < result.length; i++) {
     const r1 = result[i];
-    if (r1.totalLength < 30.0) continue;
+    if (r1.totalLength < 50.0) continue;
     const p1 = r1.pts;
     const dx1 = p1[p1.length - 4] - p1[0];
     const dz1 = p1[p1.length - 2] - p1[2];
@@ -528,8 +530,11 @@ function extractMajorRoads(records, terrain, ix, iy) {
 
     for (let j = i + 1; j < result.length; j++) {
       const r2 = result[j];
-      if (r2.totalLength < 30.0) continue;
-      if (r1.isOneWay && r2.isOneWay) continue;
+      if (r2.totalLength < 50.0) continue;
+      if (r1.class !== r2.class) continue;
+      const lenRatio = Math.max(r1.totalLength, r2.totalLength) / Math.min(r1.totalLength, r2.totalLength);
+      if (lenRatio > 2.5) continue;
+
       const p2 = r2.pts;
       const dx2 = p2[p2.length - 4] - p2[0];
       const dz2 = p2[p2.length - 2] - p2[2];
@@ -537,41 +542,52 @@ function extractMajorRoads(records, terrain, ix, iy) {
       if (hyp2 < 0.01) continue;
       const ux2 = dx2 / hyp2, uz2 = dz2 / hyp2;
 
-      // Cosine of angle between polylines
+      // Cosine of angle between polylines (angle < 10 degrees -> dot >= 0.9848)
       const dot = Math.abs(ux1 * ux2 + uz1 * uz2);
-      if (dot < 0.9659) continue; // angle > 15 degrees
+      if (dot < 0.9848) continue;
 
-      // Approximate midpoint separation
       const mid1 = Math.floor(p1.length / 8) * 4;
       const mid2 = Math.floor(p2.length / 8) * 4;
       const vx = p2[mid2] - p1[mid1];
       const vz = p2[mid2 + 2] - p1[mid1 + 2];
       const dist = Math.hypot(vx, vz);
-      // Data-driven threshold: 7.0m captures Hosur Road elevated corridor (7.3-8.8m) while excluding duplicate OSM ways (<7m)
       if (dist < 7.0 || dist > 40.0) continue;
 
-      // Left normal of common direction d = (ux1, uz1) is (uz1, -ux1)
-      const side = vx * uz1 - vz * ux1;
-      const leftRoad = side > 0 ? r2 : r1;
-      const rightRoad = side > 0 ? r1 : r2;
-
-      // Reorient both roads to run in direction +d
-      const l_dx = leftRoad.pts[leftRoad.pts.length - 4] - leftRoad.pts[0];
-      const l_dz = leftRoad.pts[leftRoad.pts.length - 2] - leftRoad.pts[2];
-      if (l_dx * ux1 + l_dz * uz1 < 0) {
-        reverseRoadPts(leftRoad);
-      }
-      leftRoad.isOneWay = true;
-      leftRoad.flowDir = +1; // flow in +d (one-way forward)
-
-      const r_dx = rightRoad.pts[rightRoad.pts.length - 4] - rightRoad.pts[0];
-      const r_dz = rightRoad.pts[rightRoad.pts.length - 2] - rightRoad.pts[2];
-      if (r_dx * ux1 + r_dz * uz1 < 0) {
-        reverseRoadPts(rightRoad);
-      }
-      rightRoad.isOneWay = true;
-      rightRoad.flowDir = -1; // flow in -d (one-way reverse)
+      candidatePairs.push({ i, j, dist, ux1, uz1, vx, vz });
     }
+  }
+
+  // Mutual-nearest partner matching
+  candidatePairs.sort((a, b) => a.dist - b.dist);
+  const pairedIndices = new Set();
+  for (const pair of candidatePairs) {
+    if (pairedIndices.has(pair.i) || pairedIndices.has(pair.j)) continue;
+    pairedIndices.add(pair.i);
+    pairedIndices.add(pair.j);
+
+    const r1 = result[pair.i];
+    const r2 = result[pair.j];
+    const { ux1, uz1, vx, vz } = pair;
+
+    const side = vx * uz1 - vz * ux1;
+    const leftRoad = side > 0 ? r2 : r1;
+    const rightRoad = side > 0 ? r1 : r2;
+
+    const l_dx = leftRoad.pts[leftRoad.pts.length - 4] - leftRoad.pts[0];
+    const l_dz = leftRoad.pts[leftRoad.pts.length - 2] - leftRoad.pts[2];
+    if (l_dx * ux1 + l_dz * uz1 < 0) {
+      reverseRoadPts(leftRoad);
+    }
+    leftRoad.isOneWay = true;
+    leftRoad.flowDir = +1;
+
+    const r_dx = rightRoad.pts[rightRoad.pts.length - 4] - rightRoad.pts[0];
+    const r_dz = rightRoad.pts[rightRoad.pts.length - 2] - rightRoad.pts[2];
+    if (r_dx * ux1 + r_dz * uz1 < 0) {
+      reverseRoadPts(rightRoad);
+    }
+    rightRoad.isOneWay = true;
+    rightRoad.flowDir = -1;
   }
 
   return result;

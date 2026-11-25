@@ -476,6 +476,70 @@ export class TourManager {
     this.cameraCurve = new THREE.CatmullRomCurve3(camPoints, false, "centripetal");
     this.targetCurve = new THREE.CatmullRomCurve3(targetPoints, false, "centripetal");
     this.totalDistance = this.cameraCurve.getLength();
+    this.precomputeRequiredChunks();
+  }
+
+  precomputeRequiredChunks() {
+    if (!this.cameraCurve || !this.totalDistance) return;
+    const allChunks = this.getChunks ? this.getChunks() : [];
+    const validChunkKeys = new Set(allChunks.map(c => `${c.ix},${c.iy}`));
+
+    this.precomputedRequiredSegments = [];
+    const NUM_SEGMENTS = 100;
+
+    for (let i = 0; i <= NUM_SEGMENTS; i++) {
+      const u = i / NUM_SEGMENTS;
+      const curDist = u * this.totalDistance;
+      const endDist = Math.min(this.totalDistance, curDist + 1000);
+
+      const sampleDistances = [];
+      for (let d = curDist; d <= endDist; d += 150) {
+        sampleDistances.push(d);
+      }
+      if (sampleDistances[sampleDistances.length - 1] < endDist) {
+        sampleDistances.push(endDist);
+      }
+
+      const checkPoints = sampleDistances.map(d => {
+        const pU = this.totalDistance > 0 ? d / this.totalDistance : 0;
+        const pt = this.cameraCurve.getPointAt(Math.min(1.0, Math.max(0.0, pU)));
+        return { x: pt.x, north: -pt.z };
+      });
+
+      const required = new Set();
+      // Chunk directly under camera
+      const curPt = this.cameraCurve.getPointAt(u);
+      const camIx = Math.floor(curPt.x / CHUNK_SIZE);
+      const camIy = Math.floor(-curPt.z / CHUNK_SIZE);
+      if (validChunkKeys.has(`${camIx},${camIy}`)) {
+        required.add(`${camIx},${camIy}`);
+      }
+
+      // Fast bounding box check around each checkpoint (avoids scanning 2769 chunks)
+      for (const cp of checkPoints) {
+        const minIx = Math.floor((cp.x - 1200) / CHUNK_SIZE);
+        const maxIx = Math.floor((cp.x + 1200) / CHUNK_SIZE);
+        const minIy = Math.floor((cp.north - 1200) / CHUNK_SIZE);
+        const maxIy = Math.floor((cp.north + 1200) / CHUNK_SIZE);
+
+        for (let ix = minIx; ix <= maxIx; ix++) {
+          for (let iy = minIy; iy <= maxIy; iy++) {
+            const key = `${ix},${iy}`;
+            if (validChunkKeys.has(key)) {
+              const cx = (ix + 0.5) * CHUNK_SIZE;
+              const cy = (iy + 0.5) * CHUNK_SIZE;
+              const dx = cx - cp.x;
+              const dy = cy - cp.north;
+              if (dx * dx + dy * dy <= 1200 * 1200) {
+                required.add(key);
+              }
+            }
+          }
+        }
+      }
+
+      this.precomputedRequiredSegments.push(required);
+    }
   }
 
   chainPurpleLineWays(tracks) {
@@ -552,8 +616,17 @@ export class TourManager {
    * Determine required chunks for progress s:
    * 1. Chunk under camera
    * 2. Every chunk within 1.2 km of any point along the next 1.0 km of the path
+   * Uses O(1) precomputed segment lookup for tour frame performance.
    */
   getRequiredChunkKeys(progress) {
+    if (this.precomputedRequiredSegments && this.precomputedRequiredSegments.length > 0) {
+      const idx = Math.min(
+        this.precomputedRequiredSegments.length - 1,
+        Math.max(0, Math.floor(progress * (this.precomputedRequiredSegments.length - 1)))
+      );
+      return this.precomputedRequiredSegments[idx];
+    }
+
     const required = new Set();
     if (!this.cameraCurve) return required;
 
@@ -603,12 +676,20 @@ export class TourManager {
   }
 
   /**
-   * Check how many required chunks are loaded with terrain and buildings
+   * Check how many required chunks are loaded with terrain and buildings.
+   * Throttled to a 250 ms interval during frame updates to eliminate main thread overhead.
    */
-  checkReadiness(progress) {
+  checkReadiness(progress, force = false) {
+    const now = performance.now();
+    if (!force && this._cachedReadiness && (now - (this._lastReadinessCheckTime || 0) < 250)) {
+      this._lastScanDuration = 0;
+      return this._cachedReadiness;
+    }
+    const tScan0 = performance.now();
+    this._lastReadinessCheckTime = now;
+
     const requiredKeys = this.getRequiredChunkKeys(progress);
     let loadedCount = 0;
-    const allChunks = this.getChunks ? this.getChunks() : [];
 
     for (const key of requiredKeys) {
       const state = this.loadedChunks ? (this.loadedChunks.get(key) || this.loadedChunks.get(key.replace(",", "_"))) : null;
@@ -625,11 +706,14 @@ export class TourManager {
       }
     }
 
-    return {
+    const result = {
       isReady: loadedCount >= requiredKeys.size,
       chunksLoaded: loadedCount,
       chunksRequired: requiredKeys.size
     };
+    this._cachedReadiness = result;
+    this._lastScanDuration = performance.now() - tScan0;
+    return result;
   }
 
   async startTour(tourId) {
@@ -809,8 +893,12 @@ export class TourManager {
       return;
     }
 
-    // Clamp per-frame dt to 50 ms so slow frames do not skip distance
-    const safeDt = Math.min(0.05, dt);
+    // Clamp per-frame dt to 100 ms (was 50 ms) so slow frames do not skip distance, and track skipped time
+    const maxDt = 0.10;
+    const safeDt = Math.min(maxDt, dt);
+    if (dt > maxDt) {
+      this.totalSkippedTime = (this.totalSkippedTime || 0) + (dt - maxDt);
+    }
 
     if (this.isReducedMotion) {
       return;
@@ -847,13 +935,23 @@ export class TourManager {
     }
 
     // Eased cruise speed capped at MAX_SPEED_MS (75 m/s)
+    // Trapezoidal speed envelope: 6% ramp up, 88% full cruise at 75 m/s, 6% ramp down
     const wpCount = this.activeTour.waypoints.length;
     const segT = (this.progress * (wpCount - 1)) % 1.0;
-    const ease = Math.sin(segT * Math.PI);
-    this.currentSpeed = Math.max(20, ease * MAX_SPEED_MS);
+    let ease = 1.0;
+    if (segT < 0.06) {
+      ease = 0.33 + 0.67 * Math.sin((segT / 0.06) * (Math.PI / 2));
+    } else if (segT > 0.94) {
+      ease = 0.33 + 0.67 * Math.sin(((1.0 - segT) / 0.06) * (Math.PI / 2));
+    } else {
+      ease = 1.0;
+    }
+    this.currentSpeed = ease * MAX_SPEED_MS;
 
     const ds = this.currentSpeed * safeDt;
     this.progress += ds / (this.totalDistance || 1);
+    this.simCruiseTime = (this.simCruiseTime || 0) + safeDt;
+    this.simDistAdvanced = (this.simDistAdvanced || 0) + ds;
 
     if (this.progress >= 1.0) {
       this.finishTour();
@@ -945,7 +1043,7 @@ export class TourManager {
    */
   async sampleClearance(tourId) {
     const tour = this.tours.get(tourId);
-    if (!tour) return { minClearanceTerrain: 0, minClearanceBuilding: 0, minClearance: 0, samplesCount: 0 };
+    if (!tour) return { minClearanceTerrain: 0, minClearanceBuilding: 0, minClearance: 0, samplesCount: 0, lowestSamples: [] };
 
     await this.buildTourSplines(tour);
     const curve = this.cameraCurve;
@@ -955,6 +1053,7 @@ export class TourManager {
 
     let minClearanceTerrain = 999999;
     let minClearanceBuilding = 999999;
+    const samples = [];
 
     for (let i = 0; i <= numSamples; i++) {
       const u = i / numSamples;
@@ -967,6 +1066,7 @@ export class TourManager {
 
       // Query tallest building top within 100 m
       let tallestBldgTop = groundY;
+      let tallestBldgHeight = 0;
       if (!this._parsedChunkBuildings) {
         this._parsedChunkBuildings = new Map();
       }
@@ -998,7 +1098,10 @@ export class TourManager {
                   const by = chunk.iy * CHUNK_SIZE + coords[1];
                   if (Math.hypot(bx - x, by - north) <= 100) {
                     const topY = groundY + bH;
-                    if (topY > tallestBldgTop) tallestBldgTop = topY;
+                    if (topY > tallestBldgTop) {
+                      tallestBldgTop = topY;
+                      tallestBldgHeight = bH;
+                    }
                   }
                 }
               }
@@ -1012,7 +1115,23 @@ export class TourManager {
 
       if (clrTerrain < minClearanceTerrain) minClearanceTerrain = clrTerrain;
       if (clrBuilding < minClearanceBuilding) minClearanceBuilding = clrBuilding;
+
+      samples.push({
+        dist: i * step,
+        u,
+        x,
+        north,
+        camY,
+        groundY,
+        tallestBldgTop,
+        tallestBldgHeight,
+        clrTerrain,
+        clrBuilding,
+        margin: Math.min(clrTerrain, clrBuilding)
+      });
     }
+
+    const sortedSamples = [...samples].sort((a, b) => a.margin - b.margin);
 
     this.minClearanceTerrain = minClearanceTerrain;
     this.minClearanceBuilding = minClearanceBuilding;
@@ -1022,7 +1141,8 @@ export class TourManager {
       minClearanceTerrain,
       minClearanceBuilding,
       minClearance: this.minClearance,
-      samplesCount: numSamples
+      samplesCount: numSamples,
+      lowestSamples: sortedSamples.slice(0, 3)
     };
   }
 }

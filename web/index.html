@@ -583,12 +583,14 @@
           <span style="color: #38bdf8; font-style: italic; font-size: 10px;">Traffic: illustrative, not live</span>
         </div>
       </div>
-      <div class="rule"></div>
-      <h2 class="panel-title">Guided Tours</h2>
-      <div class="tours-btn-group">
-        <button type="button" class="preset-btn tour-btn" id="tour-btn-core-city" data-tour="core-city" aria-label="Start Core City tour">Core City (17:30)</button>
-        <button type="button" class="preset-btn tour-btn" id="tour-btn-silicon-plateau" data-tour="silicon-plateau" aria-label="Start Silicon Plateau tour">Silicon Plateau (12:00)</button>
-        <button type="button" class="preset-btn tour-btn" id="tour-btn-purple-line" data-tour="purple-line" aria-label="Start Namma Metro Purple Line tour">Namma Metro Purple Line (19:00)</button>
+      <div id="guided-tours-section">
+        <div class="rule"></div>
+        <h2 class="panel-title">Guided Tours</h2>
+        <div class="tours-btn-group">
+          <button type="button" class="preset-btn tour-btn" id="tour-btn-core-city" data-tour="core-city" aria-label="Start Core City tour">Core City (17:30)</button>
+          <button type="button" class="preset-btn tour-btn" id="tour-btn-silicon-plateau" data-tour="silicon-plateau" aria-label="Start Silicon Plateau tour">Silicon Plateau (12:00)</button>
+          <button type="button" class="preset-btn tour-btn" id="tour-btn-purple-line" data-tour="purple-line" aria-label="Start Namma Metro Purple Line tour">Namma Metro Purple Line (19:00)</button>
+        </div>
       </div>
       <div class="rule"></div>
       <h2 class="panel-title">Landmarks & Tech Parks</h2>
@@ -670,6 +672,24 @@
       import { OrbitControls } from "three/addons/controls/OrbitControls.js";
       import { HeroLandmarksManager } from "./hero-landmarks.js";
       import { TourManager } from "./tours.js";
+
+      // Feature Flag for Guided Tours (default false; active if TOURS_ENABLED or URL has #tours=1)
+      const TOURS_ENABLED = false;
+      window.TOURS_ENABLED = TOURS_ENABLED;
+      function updateToursVisibility() {
+        const toursHashParam = new URLSearchParams(location.hash.slice(1)).get("tours");
+        const isToursActive = TOURS_ENABLED || toursHashParam === "1";
+        window.isToursActive = isToursActive;
+        const guidedToursSection = document.querySelector("#guided-tours-section");
+        if (guidedToursSection) {
+          guidedToursSection.style.display = isToursActive ? "block" : "none";
+        }
+      }
+      window.updateToursVisibility = updateToursVisibility;
+      updateToursVisibility();
+      window.addEventListener("hashchange", updateToursVisibility);
+      window.__recordPerf = false;
+      window.__frameStats = { tourUpdateMs: [], scanMs: [], renderMs: [], workerMs: [], uploadMs: [] };
 
       const DATA_VERSION = "20261124.8";
       const APP_VERSION = DATA_VERSION;
@@ -1266,10 +1286,12 @@
           fragmentShader: TRAFFIC_FRAGMENT_SHADER,
           transparent: true,
           blending: THREE.AdditiveBlending,
+          depthTest: true,
           depthWrite: false,
         });
 
         const mesh = new THREE.Points(geometry, material);
+        mesh.renderOrder = 0;
         mesh.frustumCulled = false;
         state.trafficMesh = mesh;
         state.trafficCount = vehicleCount;
@@ -1698,12 +1720,16 @@
           failed: false,
         };
         slot.worker.onmessage = event => {
+          const tWork0 = performance.now();
           const job = slot.current;
           if (!job || event.data.id !== job.id) return;
           slot.current = null;
           if (event.data.error) job.reject(new Error(event.data.error));
           else job.resolve(event.data.result);
           dispatchBuildQueue();
+          if (window.__recordPerf) {
+            window.__frameStats.workerMs.push(performance.now() - tWork0);
+          }
         };
         slot.worker.onerror = event => {
           event.preventDefault();
@@ -1765,6 +1791,7 @@
       }
 
       function restoreChunkGeometry(result, key) {
+        const tUp0 = performance.now();
         let maskTexture = null;
         if (result.maskBitmap) {
           maskTexture = new THREE.Texture(result.maskBitmap);
@@ -1778,7 +1805,7 @@
 
         const terrainMat = createTerrainMaterial(maskTexture);
 
-        return {
+        const restored = {
           buildingMesh: restoreGeometry(
             result.building,
             buildingMaterial,
@@ -1799,6 +1826,10 @@
           trafficMesh: null,
           trafficCount: 0,
         };
+        if (window.__recordPerf) {
+          window.__frameStats.uploadMs.push(performance.now() - tUp0);
+        }
+        return restored;
       }
 
       function disposeChunk(state) {
@@ -3822,7 +3853,7 @@
           trafficUniforms.uTrafficDay.value = trafficDayEnabled ? 1.0 : 0.0;
           restored = true;
         }
-        if (p.has("tour")) {
+        if (isToursActive && p.has("tour")) {
           const tourId = p.get("tour");
           if (["core-city", "silicon-plateau", "purple-line"].includes(tourId)) {
             setTimeout(() => {
@@ -4211,10 +4242,21 @@
         }
 
         if (window.tourManager) {
+          const tTour0 = performance.now();
           window.tourManager.update(dt);
+          const tTour1 = performance.now();
+          if (window.__recordPerf) {
+            window.__frameStats.tourUpdateMs.push(tTour1 - tTour0);
+            window.__frameStats.scanMs.push(window.tourManager._lastScanDuration || 0);
+          }
         }
 
+        const tR0 = performance.now();
         renderer.render(scene, camera);
+        const tR1 = performance.now();
+        if (window.__recordPerf) {
+          window.__frameStats.renderMs.push(tR1 - tR0);
+        }
         fpsFrames++;
         if (now - fpsStart >= 1000) {
           fpsElement.textContent = `${Math.round(fpsFrames * 1000 / (now - fpsStart))} FPS`;
