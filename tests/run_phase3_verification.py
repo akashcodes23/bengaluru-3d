@@ -128,7 +128,7 @@ def run_phase3_verification():
                 "lon": 77.595833,
                 "alt": 220,
                 "times": [
-                    {"label": "1200", "time": 48, "desc": "12:00 Midday (reflective glass curtain walls and spire)"},
+                    {"label": "1200", "time": 48, "desc": "12:00 Midday (high solar elevation lighting)"},
                     {"label": "1730", "time": 70, "desc": "17:30 Golden Hour (golden facade reflections)"},
                     {"label": "2100", "time": 84, "desc": "21:00 Night (modern glowing corporate office windows)"}
                 ]
@@ -140,9 +140,9 @@ def run_phase3_verification():
                 "lon": 77.71856,
                 "alt": 210,
                 "times": [
-                    {"label": "1200", "time": 48, "desc": "12:00 Midday (roof canopy & tiered skylights)"},
-                    {"label": "1730", "time": 70, "desc": "17:30 Golden Hour (warm amber canopy tones)"},
-                    {"label": "2100", "time": 84, "desc": "21:00 Night (interior illumination & skylight glow)"}
+                    {"label": "1200", "time": 48, "desc": "12:00 Midday (high solar elevation lighting)"},
+                    {"label": "1730", "time": 70, "desc": "17:30 Golden Hour (warm low-angle raking light)"},
+                    {"label": "2100", "time": 84, "desc": "21:00 Night (ambient darkness & artificial illumination)"}
                 ]
             }
         ]

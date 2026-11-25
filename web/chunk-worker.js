@@ -355,7 +355,7 @@ function makeRibbonGeometry(records, widthForClass, offset, terrain, ix, iy, exa
       const dx = x2 - x1, dn = north2 - north1;
       const length = Math.hypot(dx, dn);
       if (length < 0.01) continue;
-      const steps = terrain ? Math.max(1, Math.ceil(length / 30)) : 1;
+      const steps = terrain ? Math.max(1, Math.ceil(length / 15)) : 1;
       const offsetX = -dn / length * width / 2;
       const offsetNorth = dx / length * width / 2;
       for (let step = 0; step < steps; step += 1) {
@@ -623,7 +623,7 @@ function build(message) {
       roads: makeRibbonGeometry(
         ground?.roads || [],
         className => ROAD_WIDTHS[className] || ROAD_WIDTHS.unknown,
-        0.22,
+        0.45 + 0.25 * (exaggeration - 1.0),
         terrain,
         ix,
         iy,

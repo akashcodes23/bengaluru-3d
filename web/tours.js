@@ -18,6 +18,9 @@ export function latLonToLocal(lat, lon) {
   const north = (lat - ORIGIN_LAT) * METERS_PER_DEGREE_LAT;
   return { x, north, z: -north };
 }
+if (typeof window !== "undefined") {
+  window.latLonToLocal = latLonToLocal;
+}
 
 export function localToLatLon(x, north) {
   const lon = ORIGIN_LON + x / METERS_PER_DEGREE_LON;
@@ -101,25 +104,14 @@ export const TOURS_CONFIG = [
     traffic: false,
     waypoints: [
       {
-        name: "World Trade Center Bangalore",
+        name: "World Trade Center & Brigade Gateway",
         lat: 13.0123,
         lon: 77.5562,
         alt_m: 270,
         dwell_s: 5,
         caption: {
-          text: "World Trade Center Bangalore · tech park · 128 m (verified)",
-          source: "landmarks.json: World Trade Center Bangalore"
-        }
-      },
-      {
-        name: "Brigade Gateway",
-        lat: 13.0123565,
-        lon: 77.5564286,
-        alt_m: 270,
-        dwell_s: 5,
-        caption: {
-          text: "Brigade Gateway · tech park · Height not verified",
-          source: "landmarks.json: Brigade Gateway"
+          text: "World Trade Center & Brigade Gateway · tech park · WTC 128 m (verified), Brigade Gateway height not verified",
+          source: "landmarks.json: World Trade Center Bangalore & Brigade Gateway"
         }
       },
       {
@@ -234,7 +226,7 @@ export const TOURS_CONFIG = [
   {
     id: "purple-line",
     title: "Namma Metro Purple Line",
-    time: 19.0, // 19:00 Night glow
+    time: 17.5, // 19:00 Night glow
     traffic: true,
     waypoints: [
       {
@@ -543,7 +535,9 @@ export class TourManager {
     }
 
     this.cameraCurve = new THREE.CatmullRomCurve3(camPoints, false, "centripetal");
+    this.cameraCurve.arcLengthDivisions = 1000;
     this.targetCurve = new THREE.CatmullRomCurve3(targetPoints, false, "centripetal");
+    this.targetCurve.arcLengthDivisions = 1000;
     this.totalDistance = this.cameraCurve.getLength();
     this.precomputeRequiredChunks();
   }
@@ -830,6 +824,13 @@ export class TourManager {
     this.isPreparing = true;
     this.isPausedForLoading = false;
     this.dwellRemaining = tour.waypoints[0]?.dwell_s || 4;
+    this.simDistAdvanced = 0;
+    this.simCruiseTime = 0;
+    this.lastCamPos = null;
+    this.totalSkippedTime = 0;
+    this.frameTimes = [];
+    this.frameSpeeds = [];
+    this.totalRealDistance = 0.0;
 
     // Save full user settings to restore on cancel/close
     this.savedSettings = {
@@ -1051,9 +1052,9 @@ export class TourManager {
     this.currentSpeed = ease * MAX_SPEED_MS;
 
     const ds = this.currentSpeed * safeDt;
-    this.progress += ds / (this.totalDistance || 1);
     this.simCruiseTime = (this.simCruiseTime || 0) + safeDt;
     this.simDistAdvanced = (this.simDistAdvanced || 0) + ds;
+    this.progress = Math.min(1.0, this.simDistAdvanced / (this.totalDistance || 1));
 
     if (this.progress >= 1.0) {
       this.finishTour();
@@ -1072,6 +1073,25 @@ export class TourManager {
 
     const newCamPos = this.cameraCurve.getPointAt(this.progress);
     const newTargetPos = this.targetCurve.getPointAt(this.progress);
+
+    if (this.lastCamPos && safeDt > 0) {
+      const realDisp = newCamPos.distanceTo(this.lastCamPos);
+      const instSpeed = realDisp / safeDt;
+      if (instSpeed > MAX_SPEED_MS) {
+        const maxDisp = MAX_SPEED_MS * safeDt;
+        const dir = new THREE.Vector3().subVectors(newCamPos, this.lastCamPos).normalize();
+        newCamPos.copy(this.lastCamPos).addScaledVector(dir, maxDisp);
+      }
+      const actualDisp = newCamPos.distanceTo(this.lastCamPos);
+      const actualSpeed = actualDisp / safeDt;
+      if (actualSpeed > 1.0) {
+        if (!this.frameSpeeds) this.frameSpeeds = [];
+        this.frameSpeeds.push(actualSpeed);
+        this.totalRealDistance = (this.totalRealDistance || 0) + actualDisp;
+      }
+    }
+    this.lastCamPos = newCamPos.clone();
+
     this.camera.position.copy(newCamPos);
     this.controls.target.copy(newTargetPos);
     this.controls.update();
@@ -1217,8 +1237,8 @@ export class TourManager {
                 cx += coords[p];
                 cy += coords[p + 1];
               }
-              cx = ix * CHUNK_SIZE + (cx / numPts);
-              cy = iy * CHUNK_SIZE + (cy / numPts);
+              cx = cx / numPts;
+              cy = cy / numPts;
 
               const dist = Math.hypot(cx - x, cy - north);
               if (dist <= 100) {
@@ -1270,7 +1290,8 @@ export class TourManager {
       minClearanceBuilding,
       minClearance: this.minClearance,
       samplesCount: numSamples,
-      lowestSamples: sortedSamples.slice(0, 3)
+      lowestSamples: sortedSamples.slice(0, 3),
+      samples
     };
   }
 }

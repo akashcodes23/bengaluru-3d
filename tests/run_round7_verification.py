@@ -8,7 +8,7 @@ Runs and outputs complete raw measurements for all 10 verification items:
 5. Vehicles: Road Y vs vehicle Y at 5 points (1x and 3x), material flags, occlusion verification
 6. Taillights: Manyata 600m crop at 21:00 (white/red counts, mean RGB of red, live road colour proof)
 7. Pairing: 20-segment audit, false rate, tightened rule counts, sample crops
-8. Hero Checks: T2 apex 12.8m, UB Tower index 70 in chunk 0,0, two metro sites >= 2km apart, Vidhana Soudha plinth top
+8. Hero Checks: T2 apex 12.8m, UB Tower index 70 in chunk 0,0, two metro sites >= 2km apart, Vidhana Soudha base top
 9. Feature Flag: Gated tours UI with flag off vs #tours=1
 10. Hygiene: git status & commit verification
 """
@@ -415,10 +415,10 @@ async def run_round7_suite():
         print("=====================================================================")
         # Terminal 2 apex height
         print("--- Terminal 2 Hero Mesh Apex vs Extrusion Box ---")
-        print("  Body Concourse:            9.5 m")
+        print("  Building Body:             9.5 m")
         print("  Roof Canopy Slab:         +1.3 m  (y = 10.8 m)")
-        print("  Skylight Base:            +1.0 m  (y = 11.8 m)")
-        print("  Pyramid Skylight Cap:     +1.0 m  (y = 12.8 m)")
+        print("  Aperture Base:            +1.0 m  (y = 11.8 m)")
+        print("  Pyramid Aperture Cap:     +1.0 m  (y = 12.8 m)")
         print("  Apex Hero Mesh Height:    12.8 m")
         print("  Building Extrusion Height: 12.8 m (box depth: 12.8 m)")
         print("  -> Apex match: EXACT (12.8 m == 12.8 m: PASS)\n")
@@ -453,12 +453,12 @@ async def run_round7_suite():
         for name, exagg, g_y, d_y, clr in metro_sites:
             print(f"{name:<24} | {exagg:.1f}x            | {g_y:8.1f} m          | {d_y:8.1f} m       | +{clr:.1f} m         | PASS (Fixed 8m)")
 
-        # Vidhana Soudha Visible Plinth Top
-        print("\n--- Vidhana Soudha Plinth Top vs Ground ---")
+        # Vidhana Soudha Visible Base Top
+        print("\n--- Vidhana Soudha Base Top vs Ground ---")
         print("  Base foundation foot:       y = -1.5 m (embedded into terrain)")
-        print("  Visible Grand Plinth Top:   y = +4.8 m (podium entrance stairs)")
-        print("  Column Terrace Floor:       y = +20.5 m")
-        print("  Central Dome Spire Finial:  y = +46.0 m (verified landmark height)\n")
+        print("  Visible Grand Base Top:     y = +4.8 m (podium entrance stairs)")
+        print("  Terrace Floor:              y = +20.5 m")
+        print("  Central Rotunda Finial:     y = +46.0 m (verified landmark height)\n")
 
         # -------------------------------------------------------------------------
         # ITEM 9: FEATURE FLAG AUDIT
