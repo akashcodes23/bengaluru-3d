@@ -540,11 +540,11 @@ export const HERO_CONFIGS = {
   },
   kia_t2: {
     id: "kia_t2",
-    name: "Kempegowda International Airport (Terminal 2)",
+    name: "Terminal 2",
     category: "Airport",
     chunkKey: "13,25",
     buildingIndex: 39,
-    verifiedHeight: null, // Unverified procedural estimate
+    verifiedHeight: 12.8, // Pipeline height from c_13_25.json record 39 (4 floors x 3.2 m)
     baseElevation: 895.4,
     centroid: [13446.3, 25183.8],
     sourceUrl: "https://en.wikipedia.org/wiki/Kempegowda_International_Airport"
@@ -886,7 +886,7 @@ export class HeroLandmarksManager {
   }
 
   // ---------------------------------------------------------------------------
-  // 3. Kempegowda International Airport Terminal 2 (25 m)
+  // 3. Kempegowda International Airport Terminal 2 (12.8 m, 4 floors x 3.2 m)
   // ---------------------------------------------------------------------------
   buildKIAT2(data) {
     const config = HERO_CONFIGS.kia_t2;
@@ -928,50 +928,50 @@ export class HeroLandmarksManager {
     const bambooGeos = [];
     const skylightGeos = [];
 
-    // A. Main Glass Terminal Concourse Body (extruded real 74-vertex footprint)
+    // A. Main Glass Terminal Concourse Body (extruded real 74-vertex footprint, 9.5 m height = 0.74 ratio)
     const shape = this.makeShape(data.polygon);
-    const curtainGeo = new THREE.ExtrudeGeometry(shape, { depth: 16.0, bevelEnabled: false });
+    const curtainGeo = new THREE.ExtrudeGeometry(shape, { depth: 9.5, bevelEnabled: false });
     curtainGeo.rotateX(-Math.PI / 2);
     curtainGeo.translate(0, -1.5, 0);
     curtainGeos.push(curtainGeo);
 
-    // B. Internal Botanical Terraces & Living Gardens
-    const gardenGeo = new THREE.BoxGeometry(320, 4.0, 180);
-    gardenGeo.translate(config.centroid[0], 2.0 - 1.5, -config.centroid[1]);
+    // B. Internal Botanical Terraces & Living Gardens (2.0 m height)
+    const gardenGeo = new THREE.BoxGeometry(320, 2.0, 180);
+    gardenGeo.translate(config.centroid[0], 1.0 - 1.5, -config.centroid[1]);
     gardenGeos.push(gardenGeo);
 
-    // C. Engineered Bamboo Diagrid Canopy
-    const roofGeo = new THREE.BoxGeometry(420, 2.8, 240);
-    roofGeo.translate(config.centroid[0], 17.4 - 1.5, -config.centroid[1]);
+    // C. Engineered Bamboo Diagrid Canopy (1.3 m slab, seated at 9.5 m concourse top, reaching 10.8 m)
+    const roofGeo = new THREE.BoxGeometry(420, 1.3, 240);
+    roofGeo.translate(config.centroid[0], 10.15 - 1.5, -config.centroid[1]);
     bambooGeos.push(roofGeo);
 
-    // D. 18 Tiered Skylight Lanterns (6 x 3 rhythmic grid)
+    // D. 18 Tiered Skylight Lanterns (6 x 3 rhythmic grid reaching total 12.8 m top)
     const cx = config.centroid[0];
     const cz = -config.centroid[1];
     for (let gx = -2.5; gx <= 2.5; gx += 1.0) {
       for (let gz = -1.0; gz <= 1.0; gz += 1.0) {
         const lx = cx + gx * 65.0;
         const lz = cz + gz * 65.0;
-        // Skylight lantern base
-        const skBaseGeo = new THREE.BoxGeometry(22, 3.5, 22);
-        skBaseGeo.translate(lx, 19.5 - 1.5, lz);
+        // Skylight lantern base (1.0 m height, 10.8 m to 11.8 m)
+        const skBaseGeo = new THREE.BoxGeometry(22, 1.0, 22);
+        skBaseGeo.translate(lx, 11.3 - 1.5, lz);
         bambooGeos.push(skBaseGeo);
 
-        // Skylight pyramid glass cap
-        const skCapGeo = new THREE.ConeGeometry(14, 5.0, 4);
+        // Skylight pyramid glass cap (1.0 m height, 11.8 m to 12.8 m)
+        const skCapGeo = new THREE.ConeGeometry(14, 1.0, 4);
         skCapGeo.rotateY(Math.PI / 4);
-        skCapGeo.translate(lx, 23.5 - 1.5, lz);
+        skCapGeo.translate(lx, 12.3 - 1.5, lz);
         skylightGeos.push(skCapGeo);
       }
     }
 
-    // E. 16 Bamboo Flared Tree Columns supporting the roof
+    // E. 16 Bamboo Flared Tree Columns supporting the roof (9.5 m height)
     for (let gx = -1.5; gx <= 1.5; gx += 1.0) {
       for (let gz = -1.5; gz <= 1.5; gz += 1.0) {
         const px = cx + gx * 85.0;
         const pz = cz + gz * 50.0;
-        const colGeo = new THREE.CylinderGeometry(3.5, 1.2, 16.0, 8);
-        colGeo.translate(px, 8.0 - 1.5, pz);
+        const colGeo = new THREE.CylinderGeometry(2.5, 0.8, 9.5, 8);
+        colGeo.translate(px, 4.75 - 1.5, pz);
         bambooGeos.push(colGeo);
       }
     }
@@ -995,8 +995,8 @@ export class HeroLandmarksManager {
     const skylightMesh = new THREE.Mesh(mergedSkylights, skylightGlassMat);
     heroGroup.add(skylightMesh);
 
-    // Normal box LOD (for distance >= 300m)
-    const normalGeo = new THREE.ExtrudeGeometry(shape, { depth: 25.0, bevelEnabled: false });
+    // Normal box LOD (for distance >= 300m, matches 12.8 m pipeline extrusion)
+    const normalGeo = new THREE.ExtrudeGeometry(shape, { depth: 12.8, bevelEnabled: false });
     normalGeo.rotateX(-Math.PI / 2);
     normalGeo.translate(0, -1.5, 0);
     const normalMesh = new THREE.Mesh(normalGeo, bambooRoofMat);

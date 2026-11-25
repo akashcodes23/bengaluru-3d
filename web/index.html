@@ -146,6 +146,162 @@
       }
       .preset-btn:hover { background: #ffffff18; border-color: #ffc87988; }
       .preset-btn.active { background: #ffc87922; border-color: #ffc879; color: #ffc879; }
+
+      /* Guided Tour Styles */
+      .tours-btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .tour-btn {
+        width: 100%;
+        text-align: left;
+        padding: 6px 10px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+      .tour-btn::after {
+        content: "▶";
+        font-size: 8px;
+        opacity: 0.6;
+      }
+      .tour-btn.active {
+        background: #38bdf82b;
+        border-color: #38bdf888;
+        color: #38bdf8;
+      }
+
+      /* Guided Tour Caption Card */
+      .tour-card {
+        position: fixed;
+        bottom: 42px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: calc(100% - 40px);
+        max-width: 480px;
+        background: rgba(15, 23, 42, 0.94);
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        border-radius: 12px;
+        padding: 14px 18px;
+        color: #f8fafc;
+        z-index: 50;
+        box-shadow: 0 12px 28px -4px rgba(0, 0, 0, 0.65), 0 8px 12px -6px rgba(0, 0, 0, 0.5);
+        pointer-events: auto;
+        font-family: inherit;
+      }
+      .tour-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+      }
+      .tour-card-meta {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .tour-card-badge {
+        font-size: 9px;
+        font-weight: 700;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+        background: #0284c7;
+        color: #fff;
+        padding: 2px 6px;
+        border-radius: 4px;
+      }
+      .tour-card-title {
+        font-size: 13px;
+        font-weight: 650;
+        color: #f1f5f9;
+      }
+      .tour-card-step {
+        font-size: 11px;
+        color: #94a3b8;
+      }
+      .tour-close-btn {
+        background: none;
+        border: none;
+        color: #94a3b8;
+        font-size: 16px;
+        cursor: pointer;
+        padding: 2px 6px;
+        border-radius: 4px;
+        transition: color 0.15s;
+      }
+      .tour-close-btn:hover {
+        color: #f8fafc;
+        background: rgba(255, 255, 255, 0.1);
+      }
+      .tour-stop-name {
+        margin: 0 0 4px;
+        font-size: 15px;
+        font-weight: 650;
+        color: #38bdf8;
+      }
+      .tour-caption-text {
+        margin: 0 0 6px;
+        font-size: 12px;
+        line-height: 1.45;
+        color: #e2e8f0;
+      }
+      .tour-card-source {
+        font-size: 10px;
+        color: #64748b;
+        font-family: monospace;
+        margin-bottom: 10px;
+      }
+      .tour-progress-wrap {
+        width: 100%;
+        height: 4px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 2px;
+        overflow: hidden;
+        margin-bottom: 10px;
+      }
+      .tour-progress-bar {
+        height: 100%;
+        width: 0%;
+        background: #38bdf8;
+        transition: width 0.1s linear;
+      }
+      .tour-card-controls {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .tour-ctrl-btn {
+        padding: 4px 10px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 6px;
+        color: #f1f5f9;
+        font-size: 11px;
+        font-weight: 550;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .tour-ctrl-btn:hover {
+        background: rgba(255, 255, 255, 0.16);
+        border-color: #38bdf8;
+      }
+      .tour-play-btn {
+        background: #0284c7;
+        border-color: #38bdf8;
+      }
+      .tour-play-btn:hover {
+        background: #0369a1;
+      }
+      .tour-stall-msg {
+        font-size: 11px;
+        color: #fbbf24;
+        font-style: italic;
+        margin-left: auto;
+      }
       /* Station hover tooltip */
       #metro-tooltip {
         position: fixed; display: none; z-index: 100; pointer-events: none;
@@ -191,7 +347,26 @@
         body { overflow: auto; }
         .topbar { top: 16px; left: 16px; }
         .brand-banner { height: 42px; }
-        .footer-credit { display: none; }
+        .footer-credit {
+          display: flex;
+          position: fixed;
+          bottom: 6px;
+          left: 10px;
+          z-index: 60;
+          font-size: 9px;
+          gap: 6px;
+        }
+        .footer-credit span { display: none; }
+        .about-btn { padding: 3px 6px; font-size: 10px; }
+        .tour-card {
+          bottom: 34px;
+          left: 10px;
+          right: 10px;
+          transform: none;
+          width: auto;
+          max-width: none;
+          padding: 10px 12px;
+        }
         .panel {
           top: auto; right: 10px; bottom: 48px; left: 10px; width: auto;
           max-height: calc(100vh - 120px); padding: 13px;
@@ -409,12 +584,45 @@
         </div>
       </div>
       <div class="rule"></div>
+      <h2 class="panel-title">Guided Tours</h2>
+      <div class="tours-btn-group">
+        <button type="button" class="preset-btn tour-btn" id="tour-btn-core-city" data-tour="core-city" aria-label="Start Core City tour">Core City (17:30)</button>
+        <button type="button" class="preset-btn tour-btn" id="tour-btn-silicon-plateau" data-tour="silicon-plateau" aria-label="Start Silicon Plateau tour">Silicon Plateau (12:00)</button>
+        <button type="button" class="preset-btn tour-btn" id="tour-btn-purple-line" data-tour="purple-line" aria-label="Start Namma Metro Purple Line tour">Namma Metro Purple Line (19:00)</button>
+      </div>
+      <div class="rule"></div>
       <h2 class="panel-title">Landmarks & Tech Parks</h2>
       <div id="landmark-list" aria-live="polite"></div>
       <p class="hint" id="landmark-status">Loading landmarks…</p>
     </aside>
     <div id="status" role="status">Loading city data…</div>
     <div id="landmark-label" role="status"></div>
+
+    <!-- Tour Bottom Caption Card -->
+    <div id="tour-card" class="tour-card" role="region" aria-label="Guided Tour" aria-live="polite" style="display: none;">
+      <div class="tour-card-header">
+        <div class="tour-card-meta">
+          <span class="tour-card-badge" id="tour-badge">GUIDED TOUR</span>
+          <span class="tour-card-title" id="tour-title">Core City</span>
+          <span class="tour-card-step" id="tour-step">1 / 5</span>
+        </div>
+        <button type="button" class="tour-close-btn" id="tour-close-btn" aria-label="Close tour" title="Close tour (Esc)">✕</button>
+      </div>
+      <div class="tour-card-body">
+        <h3 class="tour-stop-name" id="tour-stop-name">Vidhana Soudha</h3>
+        <p class="tour-caption-text" id="tour-caption-text">Vidhana Soudha · civic · 46 m (verified) · Stylised model, not survey geometry</p>
+        <div class="tour-card-source" id="tour-card-source">Source: landmarks.json: Vidhana Soudha</div>
+      </div>
+      <div class="tour-progress-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="tour-progress-wrap">
+        <div class="tour-progress-bar" id="tour-progress-bar"></div>
+      </div>
+      <div class="tour-card-controls">
+        <button type="button" class="tour-ctrl-btn" id="tour-prev-btn" aria-label="Previous stop" title="Previous stop">◄ Prev</button>
+        <button type="button" class="tour-ctrl-btn tour-play-btn" id="tour-play-btn" aria-label="Pause tour" title="Pause / Resume tour">❚❚ Pause</button>
+        <button type="button" class="tour-ctrl-btn" id="tour-next-btn" aria-label="Next stop" title="Next stop">Next ►</button>
+        <span class="tour-stall-msg" id="tour-stall-msg" style="display: none;">Loading upcoming terrain…</span>
+      </div>
+    </div>
     <footer class="footer-credit">
       <span>© OpenStreetMap contributors · Overture · GHSL · Copernicus DEM · </span>
       <button id="about-open-btn" class="about-btn" type="button">About & Data Sources</button>
@@ -449,9 +657,10 @@
         <p style="margin: 0 0 8px;">• <strong>Illustrative Road Traffic:</strong> Vehicle streams along motorway, trunk, and primary roads are animated procedurally on the GPU as moving light points. India left-hand drive is modelled with white headlights in forward travel and red taillights in reverse travel. Pairs of major road polylines running parallel within 7 m to 40 m (angle &lt; 15°) are detected as divided carriageways and rendered as one-way streams (left carriageway forward with white headlights, right carriageway reverse with red taillights) using a geometric inference, not tagged data. Parallel pairs under 7 m (stacked flyovers or duplicate centrelines) and unpaired segments stay two-way (offset 1.8 m to the left of travel). Polylines crossing chunk boundaries are paired within each 1 km chunk independently. Elevated flyovers are not modelled; vehicle lights follow terrain-draped road geometry. Speeds and densities are illustrative and do not reflect live traffic or sensor telemetry.</p>
         <p style="margin: 0 0 8px;">• <strong>Building Heights & Raster:</strong> Heights come from OSM/Overture tags where present, otherwise from a 2018 GHSL raster of about 90 m cells (an average, so tall towers are underestimated). Tags above 165 m (not verified landmarks), or 5+ identical tags of 100 m or more within 300 m, are replaced by the raster value (228 buildings). Tall tags with a low raster value are shown as "OSM tag, unverified" (232 buildings). Buildings with no raster value use an area-based guess (4,994 buildings).</p>
         <p style="margin: 0 0 8px;">• <strong>Namma Metro Network:</strong> 102.79 one-way route km operational (Purple 43.48 km, Green 33.86 km, Yellow 18.05 km, Pink 7.40 km); 88 unique physical operational stations in OSM (80 elevated, 7 underground, 1 at grade), 91 when interchange stations are counted once per line. The difference from the public reference of 91 stations is not resolved. Metro trains are illustrative, not live.</p>
-        <p style="margin: 0 0 8px;">• <strong>Procedural Hero Landmarks:</strong> Prominent landmarks (Vidhana Soudha, UB City complex, and Kempegowda International Airport Terminal 2) feature procedural 3D models built upon real Overture/OSM footprint geometry. Stylised model, not survey geometry. Vidhana Soudha (46 m) and UB Tower (123 m) reflect verified heights. Other towers in the UB City complex use estimated heights (unverified). Kempegowda Terminal 2 (25 m) is an unverified procedural estimate with no source survey.</p>
-        <p style="margin: 0 0 8px;">• <strong>Assumptions:</strong> Blue, Orange, and Red lines forced to construction; Pink elevated section with start_date 2026-11-14 treated as operational; Pink tunnels treated as construction; viaduct deck height METRO_VIADUCT_M = 8.0 m; underground tunnel depth METRO_TUNNEL_DEPTH_M = -12.0 m (an assumed engineering depth); airport runway width AIRPORT_RUNWAY_WIDTH_M = 45.0 m unless an OSM width tag exists. Two Phase 1 portal ramp ways (Purple Line UG1: 508711042, 607901267) join the elevated viaduct at MG Road / Reach 1 (layer 2) to the underground tunnel at Cubbon Park / UG1 (layer -2); they are classified under portal mode derived from connectivity, rendered as a descending ramp interpolating from viaduct deck height (+8.0 m) down to the assumed tunnel depth (-12.0 m, grade ~11.7%), hidden in default view, with the above-ground portion (+8m to 0m) rendered in default view so the viaduct deck transitions smoothly into terrain. Way 1189861890 is classified via level &lt; 0 tag rule. Green Line portal approach ways 142484399 and 607901295 carry embankment=yes and are retained as surface/at-grade approach tracks.</p>
+        <p style="margin: 0 0 8px;">• <strong>Procedural Hero Landmarks:</strong> Prominent landmarks (Vidhana Soudha, UB City complex, and Kempegowda International Airport Terminal 2) feature procedural 3D models built upon real Overture/OSM footprint geometry. Stylised model, not survey geometry. Vidhana Soudha (46 m) and UB Tower (123 m) reflect verified heights. Other towers in the UB City complex use estimated heights (unverified). Kempegowda Terminal 2 height is 12.8 m, matching the data pipeline extrusion derived from 4 tagged floors (4 × 3.2 m).</p>
+        <p style="margin: 0 0 8px;">• <strong>Assumptions:</strong> Blue, Orange, and Red lines forced to construction; Pink elevated section with start_date 2026-11-14 treated as operational; Pink tunnels treated as construction; viaduct deck height METRO_VIADUCT_M = 8.0 m; underground tunnel depth METRO_TUNNEL_DEPTH_M = -12.0 m (an assumed engineering depth); airport runway width AIRPORT_RUNWAY_WIDTH_M = 45.0 m unless an OSM width tag exists. Two Phase 1 portal ramp ways (Purple Line UG1: 508711042, 607901267) join the elevated viaduct at MG Road / Reach 1 (layer 2) to the underground tunnel at Cubbon Park / UG1 (layer -2); they are schematic transitions (grade ~11.6%, depth is an assumption) classified under portal mode derived from connectivity, rendered as a descending ramp interpolating from viaduct deck height (+8.0 m) down to the assumed tunnel depth (-12.0 m), hidden in default view, with the above-ground portion (+8m to 0m) rendered in default view so the viaduct deck transitions smoothly into terrain. Way 1189861890 is classified via level &lt; 0 tag rule. Green Line portal approach ways 142484399 and 607901295 carry embankment=yes and are retained as surface/at-grade approach tracks.</p>
         <p style="margin: 0;">• <strong>Verified Landmarks:</strong> Only landmarks with a sourced height are verified: Vidhana Soudha, UB City (UB Tower), and World Trade Center Bangalore.</p>
+        <p style="margin: 8px 0 0;">• <strong>Guided Tours:</strong> Cinematic camera paths over open city data capped at 75 m/s. Progress is strictly gated on chunk readiness: movement advances only when the terrain and building chunk under the camera and all chunks within 1.2 km along the next 1.0 km of the path are fully loaded; otherwise the tour pauses and displays "Loading...". Station stops display only official name, line, and operational mode (&ldquo;&lt;name&gt; &middot; Purple Line &middot; elevated/underground/at-grade&rdquo;). Exiting or completing a tour cleanly restores user environmental and display settings.</p>
       </div>
     </div>
 
@@ -460,6 +669,7 @@
       window.THREE = THREE;
       import { OrbitControls } from "three/addons/controls/OrbitControls.js";
       import { HeroLandmarksManager } from "./hero-landmarks.js";
+      import { TourManager } from "./tours.js";
 
       const DATA_VERSION = "20261124.8";
       const APP_VERSION = DATA_VERSION;
@@ -490,6 +700,7 @@
         : 4;
       radiusSlider.value = String(initialRadius);
       let verticalExaggeration = Number(verticalExaggerationSlider.value);
+      window.verticalExaggeration = verticalExaggeration;
       const heightSourceToggle = document.querySelector("#height-source");
 
       // Default date to today in IST
@@ -898,6 +1109,12 @@
           return;
         }
 
+        // Distance culling: do not build traffic for chunks > 2.6 km from camera focus
+        const cx = (state.chunk.ix + 0.5) * CHUNK_SIZE;
+        const cz = -(state.chunk.iy + 0.5) * CHUNK_SIZE;
+        const distToFocus = Math.hypot(cx - controls.target.x, cz - controls.target.z);
+        if (distToFocus > 2600.0) return;
+
         const majorRoads = state.majorRoads;
         let totalVertices = 0;
         for (const road of majorRoads) {
@@ -1030,8 +1247,6 @@
         geometry.setAttribute("aRoadSpan", new THREE.BufferAttribute(new Float32Array(roadSpanData), 4));
         geometry.setAttribute("aTrafficParam", new THREE.BufferAttribute(new Float32Array(trafficParamData), 4));
 
-        const cx = (state.chunk.ix + 0.5) * CHUNK_SIZE;
-        const cz = -(state.chunk.iy + 0.5) * CHUNK_SIZE;
         geometry.boundingSphere = new THREE.Sphere(new THREE.Vector3(cx, 0, cz), CHUNK_SIZE * 1.5);
 
         const material = new THREE.ShaderMaterial({
@@ -1071,6 +1286,7 @@
         trafficEnabled = trafficToggle ? trafficToggle.checked : true;
         trafficDensity = trafficDensitySelect ? trafficDensitySelect.value : "low";
         if (trafficDensity === "off") trafficEnabled = false;
+        window.currentTrafficSetting = trafficDensity;
 
         if (!trafficEnabled || trafficDensity === "off") {
           trafficGroup.visible = false;
@@ -1136,6 +1352,23 @@
 
         for (const entry of entries) {
           const s = entry.state;
+          if (entry.dist > 2600.0) {
+            // Distance culling: remove traffic for chunks > 2.6 km from camera focus
+            if (s.trafficMesh) {
+              trafficGroup.remove(s.trafficMesh);
+              if (s.trafficMesh.geometry) s.trafficMesh.geometry.dispose();
+              if (s.trafficMesh.material) {
+                if (s.trafficMesh.material.uniforms?.uRoadTexture?.value) {
+                  s.trafficMesh.material.uniforms.uRoadTexture.value.dispose();
+                }
+                s.trafficMesh.material.dispose();
+              }
+              s.trafficMesh = null;
+              totalTrafficVehicles -= (s.trafficCount || 0);
+              s.trafficCount = 0;
+            }
+            continue;
+          }
           if (!capReached && sumVehicles < MAX_TOTAL_TRAFFIC) {
             if (!s.trafficMesh) {
               buildChunkTraffic(s);
@@ -2359,6 +2592,7 @@
         const oldTargetY = controls.target.y;
         const cameraOffset = camera.position.y - oldTargetY;
         verticalExaggeration = Number(value);
+        window.verticalExaggeration = verticalExaggeration;
         trafficUniforms.uExaggeration.value = verticalExaggeration;
         verticalExaggerationLabel.textContent = `${verticalExaggeration.toFixed(1)}x`;
         if (manifest?.terrain) {
@@ -2424,7 +2658,7 @@
         const cUnderside = new THREE.Color("#0f172a"); // dark underside
         const cDarkSides = new THREE.Color("#1e293b"); // dark concrete skirts
         const halfWidth = 4.0; // 8m wide deck
-        const depth = 1.0 * exaggeration;
+        const depth = 1.0; // Fixed 1m deck slab thickness
 
         for (const track of tracks) {
           const pts = track.points;
@@ -2442,8 +2676,8 @@
             const nx = -dy / len;
             const ny = dx / len;
 
-            const deckY0 = (g0 + viaductOffset) * exaggeration;
-            const deckY1 = (g1 + viaductOffset) * exaggeration;
+            const deckY0 = g0 * exaggeration + viaductOffset;
+            const deckY1 = g1 * exaggeration + viaductOffset;
             const underY0 = deckY0 - depth;
             const underY1 = deckY1 - depth;
 
@@ -2537,8 +2771,8 @@
             if (len < 0.05) continue;
             const nx = -dy / len;
             const ny = dx / len;
-            const y_elev0 = (g0 + 0.3) * exaggeration;
-            const y_elev1 = (g1 + 0.3) * exaggeration;
+            const y_elev0 = g0 * exaggeration + 0.3;
+            const y_elev1 = g1 * exaggeration + 0.3;
 
             const t0Lx = x0 - nx * halfWidth, t0Lz = -(y0 - ny * halfWidth);
             const t0Rx = x0 + nx * halfWidth, t0Rz = -(y0 + ny * halfWidth);
@@ -2586,10 +2820,10 @@
             const nx = -dy / len;
             const ny = dx / len;
 
-            const z0_clamped = Math.max(g0 + 0.2, trackZ0);
-            const z1_clamped = Math.max(g1 + 0.2, trackZ1);
-            const y_elev0 = z0_clamped * exaggeration;
-            const y_elev1 = z1_clamped * exaggeration;
+            const offset0 = Math.max(0.2, trackZ0 - g0);
+            const offset1 = Math.max(0.2, trackZ1 - g1);
+            const y_elev0 = g0 * exaggeration + offset0;
+            const y_elev1 = g1 * exaggeration + offset1;
 
             const t0Lx = x0 - nx * halfWidth, t0Lz = -(y0 - ny * halfWidth);
             const t0Rx = x0 + nx * halfWidth, t0Rz = -(y0 + ny * halfWidth);
@@ -2633,9 +2867,11 @@
             if (len < 0.05) continue;
             const nx = -dy / len;
             const ny = dx / len;
-            // Ramp for portal / subsurface depth for underground
-            const y_elev0 = Number.isFinite(trackZ0) ? trackZ0 * exaggeration : (g0 - 6.0) * exaggeration;
-            const y_elev1 = Number.isFinite(trackZ1) ? trackZ1 * exaggeration : (g1 - 6.0) * exaggeration;
+            // Ramp for portal / subsurface depth for underground (fixed metres offset from terrain)
+            const offset0 = Number.isFinite(trackZ0) ? (trackZ0 - g0) : -12.0;
+            const offset1 = Number.isFinite(trackZ1) ? (trackZ1 - g1) : -12.0;
+            const y_elev0 = g0 * exaggeration + offset0;
+            const y_elev1 = g1 * exaggeration + offset1;
 
             const t0Lx = x0 - nx * halfWidth, t0Lz = -(y0 - ny * halfWidth);
             const t0Rx = x0 + nx * halfWidth, t0Rz = -(y0 + ny * halfWidth);
@@ -2677,8 +2913,8 @@
             const [x0, y0, , g0] = pts[i - 1];
             const [x1, y1, , g1] = pts[i];
             const offset = track.mode === "elevated" ? viaductOffset : 0.5;
-            const y0_elev = (g0 + offset) * exaggeration;
-            const y1_elev = (g1 + offset) * exaggeration;
+            const y0_elev = g0 * exaggeration + offset;
+            const y1_elev = g1 * exaggeration + offset;
             linePositions.push(x0, y0_elev, -y0, x1, y1_elev, -y1);
           }
         }
@@ -2730,7 +2966,7 @@
             let accDist = 0;
             for (let i = 0; i < pts.length; i++) {
               const [x, y, , groundZ] = pts[i];
-              const deckY = (groundZ + viaductOffset) * exaggeration;
+              const deckY = groundZ * exaggeration + viaductOffset;
               const worldZ = -y;
               if (i > 0) {
                 const [px, py] = pts[i - 1];
@@ -2739,7 +2975,7 @@
               if (i === 0 || accDist >= 65) {
                 accDist = 0;
                 const groundY = groundZ * exaggeration;
-                const pierHeight = Math.max(1, deckY - groundY);
+                const pierHeight = viaductOffset; // Fixed 8m clearance
                 const pierY = groundY + pierHeight / 2;
                 pierInstances.push({ x, y: pierY, z: worldZ, height: pierHeight });
               }
@@ -2853,11 +3089,11 @@
               const s = group[i];
               let platformY;
               if (s.mode === "elevated") {
-                platformY = (s.ground_z + viaductOffset) * exaggeration;
+                platformY = s.ground_z * exaggeration + viaductOffset;
               } else if (s.mode === "underground") {
-                platformY = showUnderground ? (s.ground_z - 10) * exaggeration : (s.ground_z + 1.2) * exaggeration;
+                platformY = s.ground_z * exaggeration + (showUnderground ? -10.0 : 1.2);
               } else {
-                platformY = (s.ground_z + 0.5) * exaggeration;
+                platformY = s.ground_z * exaggeration + 0.5;
               }
 
               dummy.position.set(s.x, platformY, -s.y);
@@ -2933,14 +3169,14 @@
             const x = x0 + (x1 - x0) * t;
             const y = y0 + (y1 - y0) * t;
             const g = g0 + (g1 - g0) * t;
-            const trackY = (g + offset) * exaggeration + 2.0;
+            const trackY = g * exaggeration + offset + 2.0;
             return new THREE.Vector3(x, trackY, -y);
           }
           d += segLen;
         }
         const last = pts[pts.length - 1];
         const offsetLast = track.mode === "elevated" ? 8.0 : (track.mode === "underground" ? -10.0 : 0.4);
-        return new THREE.Vector3(last[0], (last[3] + offsetLast) * exaggeration + 2.0, -last[1]);
+        return new THREE.Vector3(last[0], last[3] * exaggeration + offsetLast + 2.0, -last[1]);
       }
 
       function updateMetroTrains(dt) {
@@ -3302,7 +3538,11 @@
         const lat = ORIGIN_LAT + cNorth / METERS_PER_DEGREE_LAT;
         const area = polygonArea(coords);
 
-        let name = buildingNamesData[building.chunkKey]?.[String(building.index)];
+        const chunkKeyUnderscore = (building.chunkKey || "").replace(",", "_");
+        const chunkKeyComma = (building.chunkKey || "").replace("_", ",");
+        let name = buildingNamesData[building.chunkKey]?.[String(building.index)] ||
+                   buildingNamesData[chunkKeyUnderscore]?.[String(building.index)] ||
+                   buildingNamesData[chunkKeyComma]?.[String(building.index)];
         let matchedLandmark = null;
         for (const l of loadedLandmarksList) {
           const dist = Math.hypot(
@@ -3582,6 +3822,15 @@
           trafficUniforms.uTrafficDay.value = trafficDayEnabled ? 1.0 : 0.0;
           restored = true;
         }
+        if (p.has("tour")) {
+          const tourId = p.get("tour");
+          if (["core-city", "silicon-plateau", "purple-line"].includes(tourId)) {
+            setTimeout(() => {
+              if (window.tourManager) window.tourManager.startTour(tourId);
+            }, 600);
+            restored = true;
+          }
+        }
         if (p.has("cam") && p.has("target")) {
           const camPts = p.get("cam").split(",").map(Number);
           const tarPts = p.get("target").split(",").map(Number);
@@ -3603,6 +3852,7 @@
         ]);
         if (!metroRes.ok) return;
         metroData = await metroRes.json();
+        window.metroData = metroData;
         metroStationsData = stationsRes.ok ? await stationsRes.json() : [];
         window.metroStationsData = metroStationsData;
         buildMetroVisuals(verticalExaggeration);
@@ -3846,6 +4096,73 @@
         console.error("Could not load airport:", error);
       });
 
+      const tourManager = new TourManager();
+      window.tourManager = tourManager;
+      tourManager.init({
+        camera,
+        controls,
+        renderer,
+        loadedChunks,
+        getChunks: () => chunks,
+        getTerrainElevation: (x, north) => getTerrainElevationAtLocal(x, north),
+        setTime: (hours) => {
+          const h = Math.floor(hours);
+          const m = Math.round((hours - h) * 60);
+          window.setTimeByClock(h, m);
+        },
+        setTimeRaw: (v) => {
+          timeSlider.value = String(v);
+          setTime(Number(v));
+          scheduleHashUpdate();
+        },
+        setRadius: (km) => {
+          radiusSlider.value = String(km);
+          loadedRadius = km * 1000;
+          updateHud();
+          refreshChunkSet();
+        },
+        setTraffic: (level) => {
+          trafficDensity = level;
+          trafficEnabled = trafficDensity !== "off";
+          if (trafficToggle) trafficToggle.checked = trafficEnabled;
+          if (trafficDensitySelect) trafficDensitySelect.value = trafficDensity;
+          updateTrafficSettings();
+        },
+        setTrafficDay: (v) => {
+          trafficDayEnabled = v;
+          if (trafficDayToggle) trafficDayToggle.checked = v;
+          trafficUniforms.uTrafficDay.value = v ? 1.0 : 0.0;
+          scheduleHashUpdate();
+        },
+        setExaggeration: (v) => {
+          updateVerticalExaggeration(v);
+          if (verticalExaggerationSlider) verticalExaggerationSlider.value = String(v);
+          if (verticalExaggerationLabel) verticalExaggerationLabel.textContent = v.toFixed(1) + "x";
+          scheduleHashUpdate();
+        },
+        setShadows: (v) => {
+          shadowsEnabled = v;
+          if (shadowsToggle) shadowsToggle.checked = v;
+          updateAllChunkShadows();
+          if (sunLight) sunLight.castShadow = v && currentSunElevation > 0.5;
+          scheduleHashUpdate();
+        },
+        requestChunkLoad: (a, b) => {
+          let ix, iy;
+          if (Math.abs(a) > 50 || Math.abs(b) > 50) {
+            ix = Math.floor(a / CHUNK_SIZE);
+            iy = Math.floor(b / CHUNK_SIZE);
+          } else {
+            ix = a;
+            iy = b;
+          }
+          const chunk = chunks.find(c => c.ix === ix && c.iy === iy);
+          if (chunk && !loadedChunks.has(chunkKey(chunk)) && !loadingChunks.has(chunkKey(chunk))) {
+            loadChunk(chunk);
+          }
+        }
+      });
+
       window.addEventListener("resize", () => {
         camera.aspect = innerWidth / innerHeight;
         camera.updateProjectionMatrix();
@@ -3891,6 +4208,10 @@
         if (window.heroLandmarksManager) {
           const timeMinutes = Number(timeSlider.value) * 15;
           window.heroLandmarksManager.update(camera, verticalExaggeration, timeMinutes, currentSunElevation);
+        }
+
+        if (window.tourManager) {
+          window.tourManager.update(dt);
         }
 
         renderer.render(scene, camera);

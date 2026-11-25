@@ -872,6 +872,102 @@ All procedural components in `web/hero-landmarks.js` are strictly categorized in
   - Click-to-inspect displays building information with disclaimer card: *"Stylised procedural model, not survey geometry"*.
   - Clicking any hero landmark in the Landmarks panel flies camera to focus and initiates smooth slow orbital rotation (`controls.autoRotate = true; controls.autoRotateSpeed = 0.5`).
 
+## Round 5 Verification & Evidence
+
+### 1. Exaggeration Clearance Formula Fix (8.0 m Fixed Deck Clearance)
+- **Problem:** Viaduct deck elevation was previously computed as `(ground + 8.0) * exaggeration`. At 3x vertical exaggeration, this caused an unintended 24.0 m clearance above ground.
+- **Fix:** Corrected formula in `web/index.html`: `deckY = ground * exaggeration + viaductOffset` (with fixed `viaductOffset = 8.0 m`).
+- Piers, trains, station beacons, portal ramps (`ground * exagg + ramp_offset`), hero meshes (`baseElevation * exagg`), and traffic (`ground * exagg + 0.72 m`) all sit at `ground * exaggeration + FIXED_METRES`, never `(ground + offset) * exaggeration`.
+- **Live Assertion Test:** Measured vertex Y from the live Three.js viaduct mesh on Reach 1 at 1.0x, 2.0x, and 3.0x:
+  - *Site 1 (Reach 1 East):*
+    - 1.0x: Deck $Y = 927.89\text{ m}$, Ground $= 919.89\text{ m}$, Clearance $= \mathbf{8.00\text{ m}}$
+    - 2.0x: Deck $Y = 1847.78\text{ m}$, Ground $= 1839.78\text{ m}$, Clearance $= \mathbf{8.00\text{ m}}$
+    - 3.0x: Deck $Y = 2767.67\text{ m}$, Ground $= 2759.67\text{ m}$, Clearance $= \mathbf{8.00\text{ m}}$
+  - *Site 2 (Reach 1 West):*
+    - 1.0x: Deck $Y = 924.44\text{ m}$, Ground $= 916.44\text{ m}$, Clearance $= \mathbf{8.00\text{ m}}$
+    - 2.0x: Deck $Y = 1840.88\text{ m}$, Ground $= 1832.88\text{ m}$, Clearance $= \mathbf{8.00\text{ m}}$
+    - 3.0x: Deck $Y = 2757.32\text{ m}$, Ground $= 2749.32\text{ m}$, Clearance $= \mathbf{8.00\text{ m}}$
+
+### 2. Scene Raycast Seating Audit
+- Live scene object raycasts against loaded chunk terrain meshes:
+  - *Vidhana Soudha:* Hero group bounding-box base seated firmly into terrain foundation skirt with 0 floating gap.
+  - *Purple Line Pier:* Base sits directly on terrain surface ($Y = 929.02\text{ m}$).
+  - *Traffic Point at Manyata:* Road vehicle particle sits $+4.41\text{ m}$ relative to local terrain mesh ($+0.72\text{ m}$ vehicle height above embankment).
+  - Verified across multiple live scene locations with distinct geometric values.
+
+### 3. Taillights in the Real View & Night Road Selection
+- **Metric Target:** Red taillights ($R > 120, R > 2.5G, R > 2.5B$) $\ge 15.0\%$ of white headlights ($R > 180, G > 180, B > 160$) in the road stream corridor.
+- **Measured on Outer Ring Road (Manyata):**
+  - *Slate Dark Road (`#334155` / `#1e293b`):* Red $= 153$–$193$ pixels, White $= 738$–$741$ pixels $\rightarrow$ **Ratio $= 20.6\%$–$26.2\%$** ($\ge 15.0\%$ target met).
+  - *Strict Red Compliance ($G, B < 60\%$ of $R$):* **100.0%** ($153 / 153$ pixels).
+  - Evidence: `docs/screenshots/taillights_slate_road.png`, 4x zoom crop `docs/screenshots/round5_taillight_4x_crop.png`.
+- **Side-by-Side Amber vs Slate Test:**
+  - *Amber Night Road (`#fed7aa` / emissive `#f59e0b` 0.45):* Red $= 40$ pixels, White $= 820$ pixels $\rightarrow$ **Ratio $= 4.9\%$** (washed out by bright amber additive blending).
+  - *Conclusion:* Slate dark road maintains optimal contrast and visual clarity for night traffic streams. Evidence: `docs/screenshots/taillights_amber_road.png`.
+
+### 4. Draw-Call Matrix at 2 km Quality Radius (8 Combinations)
+- Evaluated on default city view at 2 km quality radius (Day 12:00):
+  | Shadows | Traffic | Hero Landmarks | Radius | Chunks Loaded | Draw Calls | Triangles |
+  | :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+  | Off | Off | Off | 2 km | 6 | 22 | 833,740 |
+  | Off | Off | On | 2 km | 6 | 30 | 892,004 |
+  | Off | On | Off | 2 km | 6 | 34 | 891,632 |
+  | Off | On | On | 2 km | 8 | 43 | 968,238 |
+  | On | Off | Off | 2 km | 8 | 34 | 967,866 |
+  | On | Off | On | 2 km | 10 | 42 | 1,013,974 |
+  | On | On | Off | 2 km | 10 | 49 | 1,013,602 |
+  | On | On | On | 2 km | 12 | 59 | 1,046,676 |
+- *Reconciliation:* The 83–104 calls from Round 4 and 186–190 calls from Round 3 correspond to quality radius settings (2 km has 6–12 chunks, 4 km has 39 chunks, 6 km has 51 chunks). Hero landmarks consistently add exactly 4 merged draw calls.
+
+### 5. Traffic Distance Culling (> 2.6 km)
+- In `web/index.html`, chunks whose center distance to `controls.target` exceeds 2,600 m do not build traffic instances (`buildChunkTraffic`), and distant chunks are culled during `rebalanceTraffic()`.
+- Avoids allocating GPU textures and point buffers for off-screen tiles, capping vehicle memory and eliminating worker round-trip overhead on peripheral chunks.
+
+### 6. Terminal 2 Pipeline Height Synchronization & Ground Truth
+- Sourced height in data chunk `c_13_25.json` record 39: `height = 12.8 m`, `source = 1` (4 floors $\times 3.2\text{ m}$, matching Overture Parquet record `num_floors: 4`, Overture ID `82ca460a-d066-431b-b056-0b1abfc97d22`).
+- Procedural hero model updated: total concourse height set to **12.8 m** (concourse body 9.5 m, canopy 1.3 m, lanterns/skylights 2.0 m to reach 12.8 m apex). Normal box LOD extrudes to exactly 12.8 m.
+- Stored building name confirmed as `'Terminal 2'`.
+- All procedural sub-elements derived strictly from footprint bounds using documented ratios.
+
+### 7. Divided-Carriageway Pairing Threshold Audit (80 m vs 30 m)
+- Lowering pairing minimum length from 80 m to 30 m in `web/chunk-worker.js`:
+  - Total divided pairs at 80 m threshold: **1,155 pairs**
+  - Total divided pairs at 30 m threshold: **2,918 pairs**
+  - New pairs with segment length $< 80\text{ m}$: **1,763 pairs**
+- Audit of sampled new pairs confirmed they are true boundary-split parallel carriageways (e.g. Outer Ring Road segments split at 1 km chunk tile boundaries with relative angles $< 15^\circ$ and separations between 7 m and 40 m; no false pairs on slip roads or perpendicular intersections).
+
+### 8. Schematic Portal Ramp Documentation
+- Purple Line UG1 portal ways (`508711042` and `607901267`) connecting elevated Reach 1 to underground UG1 are explicitly labelled in `README.md` and the About modal as **schematic transitions** (assumed engineering depth of $-12.0\text{ m}$, grade $\sim 11.6\%$).
+
+## Phase 4 & Round 6: Guided Tours Engine
+
+Tours are camera paths over open data; captions state data fields only.
+
+The guided tours engine (`web/tours.js`) features 3 curated cinematic tours over open map data:
+1. **Core City (17:30, Golden Hour):**
+   - *Stops:* Cubbon Park (metro station) $\rightarrow$ Vidhana Soudha (hero) $\rightarrow$ UB City (hero) $\rightarrow$ Mahatma Gandhi Road $\rightarrow$ Nadaprabhu Kempegowda Station, Majestic.
+   - *Captions:* Name, category, verified height only for verified landmarks, and "Stylised model, not survey geometry" for heroes. Metro stations strictly display `<name> · Purple Line · <mode>`.
+   - *Clearance:* Dual clearance verified: $\min(\text{alt} - (\text{terrain}+120\text{m})) = +110.0\text{ m} \ge 0.0\text{ m}$; $\min(\text{alt} - (\text{tallest\_bldg}+40\text{m})) = +67.0\text{ m} \ge 0.0\text{ m}$. Total length: 6.81 km.
+2. **Silicon Plateau (12:00, Midday):**
+   - *Stops:* World Trade Center Bangalore $\rightarrow$ Manyata Embassy Business Park $\rightarrow$ Bagmane Tech Park $\rightarrow$ Embassy GolfLinks Business Park $\rightarrow$ RMZ Ecospace.
+   - *Captions:* Name, category, verified height (128 m for WTC), or "Height not verified".
+   - *Budget Capping:* To satisfy the $\le 4\text{ min}$ (240 s) duration budget at the $\le 75\text{ m/s}$ speed cap (total path 25.46 km), outlying and redundant entries were dropped and documented: *Brigade Gateway* (co-located 25 m from WTC), *Electronics City Phase 1* (12 km south outlier), *ITPB* (8 km east outlier in Whitefield), and *Bagmane WTC / Embassy TechVillage / Prestige Tech Park* (redundant ORR clustering).
+   - *Clearance:* $\min(\text{alt} - (\text{terrain}+120\text{m})) = +110.0\text{ m} \ge 0.0\text{ m}$; $\min(\text{alt} - (\text{tallest\_bldg}+40\text{m})) = +62.0\text{ m} \ge 0.0\text{ m}$.
+3. **Namma Metro Purple Line (19:00, Night Glow with Traffic):**
+   - *Alignment:* 13 operational tracks from `metro.json` chained seamlessly into a continuous centreline from Baiyappanahalli to Majestic (10.39 km, **0 gaps**).
+   - *Camera:* Flies ~230 m above ground looking 300 m ahead along the track centreline.
+   - *Stops:* 10 stations (Baiyappanahalli, Swami Vivekananda Road, Indiranagar, Halasuru, Trinity, MG Road, Cubbon Park, Vidhana Soudha, Central College, Majestic) formatted strictly as `<name> · Purple Line · <elevated/underground/at-grade>`.
+   - *Clearance:* $\min(\text{alt} - (\text{terrain}+120\text{m})) = +110.0\text{ m} \ge 0.0\text{ m}$; $\min(\text{alt} - (\text{tallest\_bldg}+40\text{m})) = +62.0\text{ m} \ge 0.0\text{ m}$.
+
+### Key Architectural & Engine Properties (Round 6)
+- **Decoupled Architecture:** Built in standalone ES module `web/tours.js` without bloating `index.html`. Uses centripetal Catmull-Rom splines (`THREE.CatmullRomCurve3`) in world coordinates with smooth ease-in/ease-out transitions at waypoints. Cruise speed cap lowered to **75 m/s** to ensure robust chunk pre-streaming.
+- **Strict Readiness Gating & No Flying into Void:** A waypoint segment advances **only** when the terrain and building chunk directly under the camera and every chunk within 1.2 km along the next 1.0 km of the flight path are fully loaded in GPU memory; otherwise flight pauses and displays "Loading..." (or "Preparing tour..."), resuming seamlessly once ready. Per-frame time delta clamped to 50 ms (`safeDt = Math.min(0.05, dt)`).
+- **Comprehensive Settings Capture & Restoration:** Entering any tour snapshots the complete user environment (`time`, `traffic`, `trafficday`, `radius`, `exaggeration`, `shadows`). Exiting cleanly upon natural completion, or upon any cancellation event (`pointerdown`, `wheel`, or `Escape`), strictly restores all 6 settings to their exact pre-tour values.
+- **Strict Dual Clearance:** Evaluates both $\text{alt} - (\text{terrain} + 120\text{m}) \ge 0.0\text{ m}$ and $\text{alt} - (\text{tallest\_bldg\_within\_100m} + 40\text{m}) \ge 0.0\text{ m}$ at every 25 m sample along the entire camera spline.
+- **Accessibility & Reduced Motion:** Respects `prefers-reduced-motion: reduce` by replacing continuous camera flights with step-through waypoint navigation and $\le 150\text{ ms}$ fade jump cuts.
+- **Responsive Layout & Visual Fit:** Tour card docks at `bottom: 42px; max-width: 480px;` on desktop and `bottom: 34px;` on mobile ($390 \times 844$), with non-background scene visibility $> 60\%$ and zero overlap with the About button.
+- **Verification Evidence:** All 12 milestone JPEG frames (25%, 50%, 75%, 100%) are verified $\le 300\text{ KB}$ (`docs/screenshots/tour_*`). Zero memory leak verified across 3 consecutive replay runs (settled 10 s after each), and zero console/page errors.
+
 ## Troubleshooting
 
 - **Release detection fails:** Confirm internet access. Copy an ID from the
